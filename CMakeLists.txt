@@ -18,7 +18,6 @@ add_compile_options(
     -mcpu=${CPU}
     $<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-Os>
     -Wall
-    -Wno-mainv
     -Wundef
     -Wfatal-errors
     --param=min-pagesize=0
