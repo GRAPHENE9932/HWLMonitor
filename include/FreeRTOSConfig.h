@@ -11,7 +11,7 @@ void vAssertCalled(const char* file, int line);
 #define configUSE_DAEMON_TASK_STARTUP_HOOK                      0
 #define configUSE_SB_COMPLETED_CALLBACK                         0
 #define configUSE_TICK_HOOK                                     0
-#define configCPU_CLOCK_HZ                                      8000000
+#define configCPU_CLOCK_HZ                                      48000000
 #define configTICK_RATE_HZ                                      200
 #define configMAX_PRIORITIES                                    4
 #define configMINIMAL_STACK_SIZE                                64

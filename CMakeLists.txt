@@ -40,6 +40,7 @@ add_executable(
 
     src/startup.s
     src/main.c
+    src/usb_hid.c
 )
 
 target_include_directories(
