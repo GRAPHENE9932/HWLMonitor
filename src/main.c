@@ -1,4 +1,7 @@
 #include "usb_hid.h"
+#include "drawing_task.h"
+#include "sh1106.h"
+
 #include <FreeRTOS.h>
 #include <task.h>
 #include <stm32f042x6.h>
@@ -45,6 +48,14 @@ int main(void) {
         blinking_task, "bli", 64,
         NULL, 0, NULL
     );
+
+    TaskHandle_t drawing_task_handle;
+    ret = xTaskCreate(
+        drawing_task, "dra", 64,
+        NULL, 1, &drawing_task_handle
+    );
+
+    sh1106_initialize(drawing_task_handle);
 
     if (ret != pdPASS) {
         

@@ -40,6 +40,11 @@ add_executable(
     src/startup.s
     src/main.c
     src/usb_hid.c
+    src/i2c.c
+    src/sh1106.c
+    src/drawing_task.c
+    submodules/stm32f0xx-hal-driver/Src/stm32f0xx_ll_i2c.c
+    submodules/stm32f0xx-hal-driver/Src/stm32f0xx_ll_gpio.c
 )
 
 target_include_directories(
@@ -47,6 +52,7 @@ target_include_directories(
     include/
     submodules/CMSIS_6/CMSIS/Core/Include
     submodules/cmsis-device-f0/Include
+    submodules/stm32f0xx-hal-driver/Inc
     submodules/FreeRTOS-Kernel/portable/GCC/ARM_CM0
     submodules/FreeRTOS-Kernel/include
 )

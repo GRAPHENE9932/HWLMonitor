@@ -7,3 +7,6 @@
 [submodule "submodules/CMSIS_6"]
 	path = submodules/CMSIS_6
 	url = https://github.com/ARM-software/CMSIS_6.git
+[submodule "submodules/stm32f0xx-hal-driver"]
+	path = submodules/stm32f0xx-hal-driver
+	url = https://github.com/STMicroelectronics/stm32f0xx-hal-driver.git

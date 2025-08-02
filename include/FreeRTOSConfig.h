@@ -1,6 +1,7 @@
 #ifndef FREERTOS_CONFIG_H
 #define FREERTOS_CONFIG_H
 
+#include "f_cpu.h"
 void vAssertCalled(const char* file, int line);
 
 #define configUSE_PREEMPTION                                    1
@@ -11,7 +12,7 @@ void vAssertCalled(const char* file, int line);
 #define configUSE_DAEMON_TASK_STARTUP_HOOK                      0
 #define configUSE_SB_COMPLETED_CALLBACK                         0
 #define configUSE_TICK_HOOK                                     0
-#define configCPU_CLOCK_HZ                                      48000000
+#define configCPU_CLOCK_HZ                                      CPU_FREQ_HZ
 #define configTICK_RATE_HZ                                      200
 #define configMAX_PRIORITIES                                    4
 #define configMINIMAL_STACK_SIZE                                64
@@ -20,7 +21,7 @@ void vAssertCalled(const char* file, int line);
 #define configUSE_STATS_FORMATTING_FUNCTIONS                    0
 #define configUSE_16_BIT_TICKS                                  0
 #define configIDLE_SHOULD_YIELD                                 1
-#define configUSE_TASK_NOTIFICATIONS                            0
+#define configUSE_TASK_NOTIFICATIONS                            1
 #define configTASK_NOTIFICATION_ARRAY_ENTRIES                   1
 #define configUSE_MUTEXES                                       0
 #define configUSE_RECURSIVE_MUTEXES                             0
