@@ -28,6 +28,7 @@ static int8_t pages_sent = -1; // -1 means that not a single page was ever sent.
 static TaskHandle_t drawing_task_handle = NULL;
 
 static void page_transfer_over(void);
+static void error_handler(void);
 
 void sh1106_initialize(TaskHandle_t drawing_task_handle_arg) {
     drawing_task_handle = drawing_task_handle_arg;
@@ -35,8 +36,9 @@ void sh1106_initialize(TaskHandle_t drawing_task_handle_arg) {
     // Let the drawing task fill the framebuffer right away.
     xTaskNotifyGive(drawing_task_handle);
 
-    i2c_dma_initialize();
     i2c_transfer_over_handler = page_transfer_over;
+    i2c_error_handler = error_handler;
+    i2c_dma_initialize();
     i2c_dma_send(SH1106_ADDRESS, INIT_COMMANDS, sizeof(INIT_COMMANDS));
 }
 
@@ -93,4 +95,8 @@ static void page_transfer_over(void) {
     else if (pages_sent == 8) {
         pages_sent = 0; // Wrap around.
     }
+}
+
+static void error_handler(void) {
+    sh1106_initialize(drawing_task_handle);
 }

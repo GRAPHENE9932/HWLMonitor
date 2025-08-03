@@ -7,6 +7,8 @@
 // This function will be called from interrupt context when the i2c_dma_send
 // succeeds.
 extern void (*i2c_transfer_over_handler)(void);
+// This function will be called from interrupt context on I2C or DMA error.
+extern void (*i2c_error_handler)(void);
 
 void i2c_dma_initialize(void);
 void i2c_dma_send(uint8_t address, const uint8_t* data_ptr, uint16_t size);

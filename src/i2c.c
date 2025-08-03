@@ -9,6 +9,12 @@
 #include <stddef.h>
 
 void (*i2c_transfer_over_handler)(void) = NULL;
+void (*i2c_error_handler)(void) = NULL;
+
+static const uint8_t* cur_data_ptr = 0;
+static uint16_t bytes_left = 0;
+static uint8_t cur_i2c_address = 0;
+static volatile bool transfer_is_ongoing = false;
 
 static void initialize_i2c(void) {
     LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
@@ -37,10 +43,12 @@ static void initialize_i2c(void) {
     LL_I2C_SetTiming(I2C1, 0x50330309); // 400 kHz on 48 MHz
     LL_I2C_SetMode(I2C1, LL_I2C_MODE_I2C);
     LL_I2C_SetMasterAddressingMode(I2C1, LL_I2C_ADDRESSING_MODE_7BIT);
-    LL_I2C_DisableClockStretching(I2C1);
+    LL_I2C_EnableClockStretching(I2C1);
     LL_I2C_EnableDMAReq_TX(I2C1);
 
     LL_I2C_EnableIT_TC(I2C1);
+    LL_I2C_EnableIT_ERR(I2C1);
+    LL_I2C_EnableIT_STOP(I2C1);
     NVIC_EnableIRQ(I2C1_IRQn);
 
     LL_I2C_Enable(I2C1);
@@ -63,19 +71,17 @@ static void initialize_dma() {
     LL_DMA_SetPeriphAddress(DMA1, LL_DMA_CHANNEL_2, LL_I2C_DMA_GetRegAddr(I2C1, LL_I2C_DMA_REG_DATA_TRANSMIT));
     LL_DMA_SetMemoryAddress(DMA1, LL_DMA_CHANNEL_2, 0);
     LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_2);
+    LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_2);
+    NVIC_EnableIRQ(DMA1_Channel2_3_IRQn);
 
     LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_2);
 }
 
 void i2c_dma_initialize(void) {
+    transfer_is_ongoing = false;
     initialize_dma();
     initialize_i2c();
 }
-
-static const uint8_t* cur_data_ptr = 0;
-static uint16_t bytes_left = 0;
-static uint8_t cur_i2c_address = 0;
-static volatile bool transfer_is_ongoing = false;
 
 static void send_batch(void) {
     if (bytes_left == 0) {
@@ -132,8 +138,17 @@ void i2c_dma_wait_for_transfer_to_complete(void) {
     while (transfer_is_ongoing);
 }
 
-void __attribute__((interrupt("IRQ"))) dma1_ch2_3_handler(void) {
-    LL_DMA_ClearFlag_TC2(DMA1);
+void __attribute__((interrupt("IRQ"))) dma_ch2_3_dma2_ch1_2_handler(void) {
+    if (LL_DMA_IsActiveFlag_TE2(DMA1)) {
+        LL_DMA_ClearFlag_TE2(DMA1);
+        if (i2c_error_handler) {
+            i2c_error_handler();
+        }
+    }
+
+    if (LL_DMA_IsActiveFlag_TC2(DMA1)) {
+        LL_DMA_ClearFlag_TC2(DMA1);
+    }
 }
 
 void __attribute__((interrupt("IRQ"))) i2c1_handler(void) {
@@ -147,5 +162,27 @@ void __attribute__((interrupt("IRQ"))) i2c1_handler(void) {
 
     if (LL_I2C_IsActiveFlag_TCR(I2C1)) {
         send_batch();
+    }
+
+    if (LL_I2C_IsActiveFlag_STOP(I2C1)) {
+        LL_I2C_ClearFlag_STOP(I2C1);
+    }
+
+    bool error = false;
+    if (LL_I2C_IsActiveFlag_BERR(I2C1)) {
+        LL_I2C_ClearFlag_BERR(I2C1);
+        error = true;
+    }
+    if (LL_I2C_IsActiveFlag_ARLO(I2C1)) {
+        LL_I2C_ClearFlag_ARLO(I2C1);
+        error = true;
+    }
+    if (LL_I2C_IsActiveFlag_OVR(I2C1)) {
+        LL_I2C_ClearFlag_OVR(I2C1);
+        error = true;
+    }
+
+    if (error && i2c_error_handler) {
+        i2c_error_handler();
     }
 }
