@@ -1,7 +1,7 @@
 #include "drawing_task.h"
 #include "sh1106.h"
 
-uint8_t frame_n = 1;
+uint16_t frame_n = 0;
 
 void drawing_task(void*) {
     while (true) {
@@ -11,12 +11,10 @@ void drawing_task(void*) {
         );
 
         for (uint16_t i = 0; i < 1024; i++) {
-            sh1106_frame_buffer[i] = i * frame_n;
+            uint8_t cur_bit = i % 128 / 8;
+            sh1106_frame_buffer[i] = frame_n & (1 << cur_bit) ? 0xFF : 0x00;
         }
 
-        if (frame_n == 255) {
-            frame_n = 1;
-        }
         frame_n++;
 
         sh1106_begin_sending();
