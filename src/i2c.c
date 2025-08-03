@@ -13,6 +13,7 @@ void (*i2c_transfer_over_handler)(void) = NULL;
 static void initialize_i2c(void) {
     LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
     LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_I2C1);
+    RCC->CFGR3 |= RCC_CFGR3_I2C1SW; // Switch to 48 MHz system clock.
 
     LL_GPIO_InitTypeDef i2c1_sda;
     i2c1_sda.Pin = LL_GPIO_PIN_10;
@@ -33,7 +34,7 @@ static void initialize_i2c(void) {
     LL_GPIO_Init(GPIOA, &i2c1_scl);
 
     _Static_assert(CPU_FREQ_HZ == 48000000, "The I2C timing is configured for 48 MHz clock frequency only.");
-    LL_I2C_SetTiming(I2C1, 0x0000020B); // 400 kHz on 48 MHz
+    LL_I2C_SetTiming(I2C1, 0x50330309); // 400 kHz on 48 MHz
     LL_I2C_SetMode(I2C1, LL_I2C_MODE_I2C);
     LL_I2C_SetMasterAddressingMode(I2C1, LL_I2C_ADDRESSING_MODE_7BIT);
     LL_I2C_DisableClockStretching(I2C1);
