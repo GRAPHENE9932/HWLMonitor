@@ -50,7 +50,11 @@ void vAssertCalled(const char* file, int line);
 #define configTIMER_QUEUE_LENGTH                                0
 #define configTIMER_TASK_STACK_DEPTH                            configMINIMAL_STACK_SIZE
 #define configMAX_SYSCALL_INTERRUPT_PRIORITY                    3
+#ifndef NDEBUG
 #define configASSERT(x)                                         if ((x) == 0) vAssertCalled(__FILE__, __LINE__)
+#else
+#define configASSERT(x)
+#endif
 #define configENABLE_MPU                                        0
 #define configENABLE_FPU                                        0
 #define configENABLE_MVE                                        0
