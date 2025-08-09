@@ -1,0 +1,99 @@
+#
+# This Python script rasterizes a subset of ASCII from a provided .ttf file
+# and generates a C header file containing raw bytes representing the glyphs in
+# format compatible with the HWLMonitor code base.
+#
+# The font should be monospaced. The generated bitmaps will be of size specified
+# by the BITMAP_WIDTH and BITMAP_HEIGHT constants. It is recommended to use a
+# bitmap font that has the same size.
+#
+
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
+from PIL import Image, ImageDraw, ImageFont
+import os
+
+BITMAP_WIDTH = 9
+BITMAP_HEIGHT = 16
+BITMAP_PADDED_HEIGHT = ((BITMAP_HEIGHT - 1) // 8 + 1) * 8
+BITMAP_SIZE_BYTES = BITMAP_WIDTH * BITMAP_PADDED_HEIGHT // 8
+
+CHARSET_BEGIN = 0x20
+CHARSET_END = 0x7F # Not including!
+CHARS_AMOUNT = CHARSET_END - CHARSET_BEGIN
+
+def rasterize_glyph(font, char):
+    image = Image.new("1", (BITMAP_WIDTH, BITMAP_HEIGHT), color=0) # "1" mode is 1 bit monochrome.
+    image_draw = ImageDraw.Draw(image)
+    image_draw.text((0, 0), chr(char), font=font, fill=1)
+    return image
+
+def image_to_bytes(image):
+    result = [0] * (BITMAP_SIZE_BYTES)
+
+    for byte_i in range(len(result)):
+        x_pos = byte_i % BITMAP_WIDTH
+        y_pos = byte_i // BITMAP_WIDTH * 8
+
+        for bit in range(8):
+            cur_pixel = image.getpixel((x_pos, y_pos + bit))
+            if cur_pixel:
+                result[byte_i] |= (1 << bit)
+    
+    return result
+
+def hex_1_byte(n):
+    return f"0x{n:02X}"
+
+def generate_c_array(font):
+    result = f"static const uint8_t FONT_GLYPHS[{CHARS_AMOUNT}][FONT_BITMAP_SIZE] = {{\n"
+
+    for char in range(CHARSET_BEGIN, CHARSET_END):
+        char_bytes = image_to_bytes(rasterize_glyph(font, char))
+
+        result += "    { "
+        result += ", ".join(map(hex_1_byte, char_bytes))
+        result += " },\n"
+    
+    result += "};"
+
+    return result
+
+def header_guard_macro_name(header_path):
+    return os.path.basename(header_path).replace(".", "_").upper()
+
+def main():
+    arg_parser = ArgumentParser(description="""
+    This Python script rasterizes a subset of ASCII from a provided .ttf file
+    and generates a C header file containing raw bytes representing the glyphs in
+    format compatible with the HWLMonitor code base.
+    """, formatter_class=RawDescriptionHelpFormatter
+    )
+    arg_parser.add_argument("--input", "-i", metavar="<path to a font file>", type=str, required=True)
+    arg_parser.add_argument("--output", "-o", metavar="<.h file path>", type=str, required=True)
+    args = arg_parser.parse_args()
+
+    font = ImageFont.truetype(args.input, size=BITMAP_HEIGHT)
+    c_array = generate_c_array(font)
+
+    header_name = header_guard_macro_name(args.output)
+
+    result = f"""#ifndef {header_name}
+#define {header_name}
+
+#include <stdint.h>
+
+#define FONT_BITMAP_SIZE {BITMAP_SIZE_BYTES}
+#define FONT_WIDTH {BITMAP_WIDTH}
+#define FONT_HEIGHT {BITMAP_PADDED_HEIGHT}
+#define FONT_FIRST_ASCII {CHARSET_BEGIN}
+
+{c_array}
+
+#endif // {header_name}
+"""
+    
+    file_out = open(args.output, "w")
+    file_out.write(result)
+
+if __name__ == "__main__":
+    main()
