@@ -43,6 +43,7 @@ add_executable(
     src/sh1106.c
     src/drawing_task.c
     src/primitive_drawing.c
+    src/gui/mode_menu.c
     submodules/stm32f0xx-hal-driver/Src/stm32f0xx_ll_i2c.c
     submodules/stm32f0xx-hal-driver/Src/stm32f0xx_ll_gpio.c
 )
