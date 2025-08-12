@@ -14,6 +14,11 @@ set(CMAKE_ASM_COMPILER arm-none-eabi-gcc)
 
 set(LINKER_SCRIPT "${PROJECT_SOURCE_DIR}/linker_script.ld")
 
+set(FONT_TTF "${FETCHCONTENT_BASE_DIR}/font-src/ttf - Mx \\(mixed outline+bitmap\\)/Mx437_IBM_VGA_9x16.ttf")
+set(FONT_H "${CMAKE_CURRENT_BINARY_DIR}/font.h")
+set(IMAGES_FOLDER "${PROJECT_SOURCE_DIR}/images")
+set(IMAGES_H "${CMAKE_CURRENT_BINARY_DIR}/images.h")
+
 add_compile_options(
     -mcpu=${CPU}
     $<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-Os>
@@ -74,8 +79,6 @@ target_link_libraries(
 )
 
 # Download, extract and process a font.
-set(FONT_TTF "${FETCHCONTENT_BASE_DIR}/font-src/ttf - Mx \\(mixed outline+bitmap\\)/Mx437_IBM_VGA_9x16.ttf")
-set(FONT_H "${CMAKE_CURRENT_BINARY_DIR}/font.h")
 FetchContent_Declare(
     font
     URL https://int10h.org/oldschool-pc-fonts/download/oldschool_pc_font_pack_v2.2_linux.zip
@@ -89,8 +92,15 @@ add_custom_command(
     OUTPUT ${FONT_H}
     COMMAND python ${PROJECT_SOURCE_DIR}/scripts/ttf-to-header.py -i ${FONT_TTF} -o ${FONT_H}
 )
-add_custom_target(generate_font_h DEPENDS ${FONT_H})
-add_dependencies(hwlmonitor generate_font_h)
+
+# Convert images to header.
+add_custom_command(
+    OUTPUT ${IMAGES_H}
+    COMMAND python ${PROJECT_SOURCE_DIR}/scripts/pngs-to-header.py -i ${IMAGES_FOLDER} -o ${IMAGES_H}
+)
+
+add_custom_target(generate_headers DEPENDS ${FONT_H} ${IMAGES_H})
+add_dependencies(hwlmonitor generate_headers)
 
 set_target_properties(hwlmonitor PROPERTIES OUTPUT_NAME hwlmonitor.elf)
 add_custom_target(
