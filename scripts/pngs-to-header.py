@@ -33,7 +33,7 @@ def hex_1_byte(n):
 def generate_c_array(image_file_path):
     image = Image.open(image_file_path)
     bytes = image_to_bytes(image)
-    array_name = os.path.splitext(os.path.basename(image_file_path))[0]
+    array_name = os.path.splitext(os.path.basename(image_file_path))[0] + "_IMG"
     result = f"static const uint8_t {array_name}[{len(bytes)}] = {{"
 
     for i in range(len(bytes)):
