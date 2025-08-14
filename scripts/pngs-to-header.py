@@ -18,7 +18,7 @@ def image_to_bytes(image):
 
     for byte_i in range(len(result)):
         x_pos = byte_i % width
-        y_pos = byte_i // width
+        y_pos = byte_i // width * 8
 
         for bit in range(8):
             cur_pixel = image.getpixel((x_pos, y_pos + bit))
