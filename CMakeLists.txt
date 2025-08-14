@@ -96,6 +96,7 @@ add_custom_command(
 # Convert images to header.
 add_custom_command(
     OUTPUT ${IMAGES_H}
+    ALL
     COMMAND python ${PROJECT_SOURCE_DIR}/scripts/pngs-to-header.py -i ${IMAGES_FOLDER} -o ${IMAGES_H}
 )
 
