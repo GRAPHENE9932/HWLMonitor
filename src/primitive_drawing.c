@@ -103,19 +103,19 @@ static const uint8_t SMALL_POINTER_DOWN_IMG[] = {
     0b00000001,
 };
 
-static void draw_image(const uint8_t* image, uint32_t x, uint32_t y) {
-    const uint8_t image_width = image[0];
-    const uint8_t image_pages = image[1];
+void draw_image(const uint8_t* image, uint32_t x, uint32_t y) {
+    const uint32_t image_width = image[0];
+    const uint32_t image_pages = image[1];
 
     for (uint32_t rel_page = 0; rel_page < image_pages; ++rel_page) {
-        uint32_t higher_page = y / 8;
-        uint32_t lower_page = (y + 7) / 8;
+        uint32_t higher_page = rel_page + y / 8;
+        uint32_t lower_page = rel_page + (y + 7) / 8;
 
         for (uint32_t rel_x = 0; rel_x < image_width; ++rel_x) {
             sh1106_frame_buffer[SH1106_WIDTH * higher_page + x + rel_x] |=
                 image[2 + image_width * rel_page + rel_x] << (y % 8);
             sh1106_frame_buffer[SH1106_WIDTH * lower_page + x + rel_x] |=
-                image[2 + image_width * rel_page + rel_x] >> (7 - y % 8);
+                image[2 + image_width * rel_page + rel_x] >> (8 - y % 8);
         }
     }
 }
