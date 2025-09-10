@@ -1,6 +1,7 @@
 #include "usb_hid.h"
 #include "drawing_task.h"
 #include "sh1106.h"
+#include "user_input.h"
 
 #include <FreeRTOS.h>
 #include <task.h>
@@ -23,7 +24,7 @@ void blinking_task(void*) {
 }
 
 // Use HSI48 for everything, also enable CRS.
-// Enable the GPIOB clock.
+// Enable GPIOA and GPIOB clock.
 void init_clock_tree(void) {
     FLASH->ACR |= 0b001; // Set LATENCY to One wait state.
     RCC->CR2 |= RCC_CR2_HSI48ON; // Enable HSI48.
@@ -36,7 +37,8 @@ void init_clock_tree(void) {
     RCC->CFGR3 &= ~RCC_CFGR3_USBSW; // Switch USB peripheral to HSI48.
     RCC->APB1ENR |= RCC_APB1ENR_USBEN; // Enable USB interface clock.
 
-    RCC->AHBENR |= RCC_AHBENR_GPIOBEN; // Enable GPIOB.
+    // Enable GPIOA and GPIOB.
+    RCC->AHBENR |= RCC_AHBENR_GPIOAEN | RCC_AHBENR_GPIOBEN;
 }
 
 int main(void) {
@@ -47,6 +49,11 @@ int main(void) {
     BaseType_t ret = xTaskCreate(
         blinking_task, "bli", 64,
         NULL, 0, NULL
+    );
+
+    ret = xTaskCreate(
+        user_input_task, "uin", 64,
+        NULL, 2, NULL
     );
 
     TaskHandle_t drawing_task_handle;

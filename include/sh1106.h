@@ -27,5 +27,6 @@ extern uint8_t sh1106_frame_buffer[SH1106_FRAME_BUFFER_SIZE];
 // frame transfer has finished.
 void sh1106_initialize(TaskHandle_t drawing_task_handle);
 void sh1106_begin_sending(void);
+void sh1106_clear_frame_buffer(void);
 
 #endif // SH1106_H

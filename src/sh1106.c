@@ -74,6 +74,10 @@ void sh1106_begin_sending(void) {
     sh1106_send_page(0);
 }
 
+void sh1106_clear_frame_buffer(void) {
+    memset(sh1106_frame_buffer, 0, SH1106_FRAME_BUFFER_SIZE);
+}
+
 static void page_transfer_over(void) {
     pages_sent++;
 

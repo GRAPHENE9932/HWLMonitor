@@ -49,6 +49,7 @@ add_executable(
     src/drawing_task.c
     src/primitive_drawing.c
     src/gui/mode_menu.c
+    src/user_input.c
     submodules/stm32f0xx-hal-driver/Src/stm32f0xx_ll_i2c.c
     submodules/stm32f0xx-hal-driver/Src/stm32f0xx_ll_gpio.c
 )

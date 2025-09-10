@@ -16,8 +16,15 @@ static const uint8_t* const IMAGES[MODE_MENU_ENTRIES_COUNT] = {
 
 static enum mode_menu_entry cur_entry = 0;
 
-void mode_menu_take_user_input(void) {
-
+void mode_menu_handle_input(enum user_input_action input) {
+    if (input & USER_INPUT_UP) {
+        cur_entry = cur_entry >= MODE_MENU_ENTRIES_COUNT - 1 ?
+            MODE_MENU_ENTRIES_COUNT - 1 :
+            cur_entry + 1;
+    }
+    if (input & USER_INPUT_DOWN) {
+        cur_entry = cur_entry == 0 ? 0 : cur_entry - 1;
+    }
 }
 
 void mode_menu_draw(void) {
@@ -27,7 +34,7 @@ void mode_menu_draw(void) {
     );
     draw_image(IMAGES[cur_entry], 0, 0);
 
-    draw_vertical_scrollbar(3, 2);
+    draw_vertical_scrollbar(MODE_MENU_ENTRIES_COUNT, cur_entry);
 }
 
 enum mode_menu_entry mode_menu_cur_entry(void) {
