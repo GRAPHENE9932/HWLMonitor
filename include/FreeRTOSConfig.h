@@ -1,7 +1,6 @@
 #ifndef FREERTOS_CONFIG_H
 #define FREERTOS_CONFIG_H
 
-#include "f_cpu.h"
 void vAssertCalled(const char* file, int line);
 
 #define configUSE_PREEMPTION                                    1
@@ -12,8 +11,8 @@ void vAssertCalled(const char* file, int line);
 #define configUSE_DAEMON_TASK_STARTUP_HOOK                      0
 #define configUSE_SB_COMPLETED_CALLBACK                         0
 #define configUSE_TICK_HOOK                                     0
-#define configCPU_CLOCK_HZ                                      CPU_FREQ_HZ
-#define configTICK_RATE_HZ                                      200
+#define configCPU_CLOCK_HZ                                      48000000
+#define configTICK_RATE_HZ                                      1000
 #define configMAX_PRIORITIES                                    4
 #define configMINIMAL_STACK_SIZE                                64
 #define configMAX_TASK_NAME_LEN                                 4
@@ -23,7 +22,7 @@ void vAssertCalled(const char* file, int line);
 #define configIDLE_SHOULD_YIELD                                 1
 #define configUSE_TASK_NOTIFICATIONS                            1
 #define configTASK_NOTIFICATION_ARRAY_ENTRIES                   1
-#define configUSE_MUTEXES                                       0
+#define configUSE_MUTEXES                                       1
 #define configUSE_RECURSIVE_MUTEXES                             0
 #define configUSE_COUNTING_SEMAPHORES                           0
 #define configUSE_ALTERNATIVE_API                               0
@@ -37,9 +36,9 @@ void vAssertCalled(const char* file, int line);
 #define configUSE_MINI_LIST_ITEM                                0
 #define configSTACK_DEPTH_TYPE                                  uint32_t
 #define configMESSAGE_BUFFER_LENGTH_TYPE                        uint8_t
-#define configSUPPORT_STATIC_ALLOCATION                         0
+#define configSUPPORT_STATIC_ALLOCATION                         1
 #define configSUPPORT_DYNAMIC_ALLOCATION                        1
-#define configTOTAL_HEAP_SIZE                                   2048
+#define configTOTAL_HEAP_SIZE                                   4096
 #define configAPPLICATION_ALLOCATED_HEAP                        0
 #define configSTACK_ALLOCATION_FROM_SEPARATE_HEAP               0
 #define configGENERATE_RUN_TIME_STATS                           0

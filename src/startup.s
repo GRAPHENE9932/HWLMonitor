@@ -108,9 +108,9 @@ isr_vector:
 
 .thumb_set nmi_handler, default_handler
 .thumb_set hard_fault_handler, default_handler
-.thumb_set svcall_handler, SVC_Handler                          @ Handled by FreeRTOS
-.thumb_set pendsv_handler, PendSV_Handler                       @ Handled by FreeRTOS
-.thumb_set systick_handler, SysTick_Handler                     @ Handled by FreeRTOS
+.thumb_set svcall_handler, SVC_Handler                  @ Handled by FreeRTOS.
+.thumb_set pendsv_handler, PendSV_Handler               @ Handled by FreeRTOS.
+.thumb_set systick_handler, SysTick_Handler             @ Handled by FreeRTOS.
 .thumb_set wwdg_handler, default_handler
 .thumb_set pvd_vddio2_handler, default_handler
 .thumb_set rtc_handler, default_handler
@@ -164,7 +164,7 @@ copy_data_loop:
     bge copy_data_loop_end
 
     mov R4, #0
-    ldrb R4, [R0]        @ R4 contains the current byte.
+    ldrb R4, [R0]       @ R4 contains the current byte.
     strb R4, [R1]
 
     add R0, R0, #1

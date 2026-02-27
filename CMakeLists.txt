@@ -4,7 +4,7 @@ include(FetchContent)
 project("HWLMonitor" C ASM)
 
 set(CPU cortex-m0)
-add_definitions(-DSTM32F042x6)
+add_definitions(-DSTM32F072xB)
 add_definitions(-DUSE_FULL_LL_DRIVER)
 
 set(CMAKE_SYSTEM_NAME Generic)
@@ -22,6 +22,7 @@ set(IMAGES_H "${CMAKE_CURRENT_BINARY_DIR}/images.h")
 add_compile_options(
     -mcpu=${CPU}
     $<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-Os>
+    -g # Add only on debug.
     -Wall
     -Wundef
     -Wfatal-errors
@@ -44,14 +45,8 @@ add_executable(
     src/startup.s
     src/main.c
     src/usb_hid.c
-    src/i2c.c
-    src/sh1106.c
-    src/drawing_task.c
-    src/primitive_drawing.c
-    src/gui/mode_menu.c
-    src/user_input.c
-    submodules/stm32f0xx-hal-driver/Src/stm32f0xx_ll_i2c.c
-    submodules/stm32f0xx-hal-driver/Src/stm32f0xx_ll_gpio.c
+    src/adc.c
+    src/debug_log.c # TODO: link only on Debug.
 )
 
 target_include_directories(
@@ -108,5 +103,5 @@ set_target_properties(hwlmonitor PROPERTIES OUTPUT_NAME hwlmonitor.elf)
 add_custom_target(
     upload
     COMMAND arm-none-eabi-objcopy -O binary hwlmonitor.elf firmware.bin
-    COMMAND st-flash write firmware.bin 0x08000000
+    COMMAND st-flash --reset write firmware.bin 0x08000000
 )
