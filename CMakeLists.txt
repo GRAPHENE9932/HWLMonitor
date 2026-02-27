@@ -22,7 +22,6 @@ set(IMAGES_H "${CMAKE_CURRENT_BINARY_DIR}/images.h")
 add_compile_options(
     -mcpu=${CPU}
     $<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-Os>
-    -g # Add only on debug.
     -Wall
     -Wundef
     -Wfatal-errors
@@ -46,7 +45,7 @@ add_executable(
     src/main.c
     src/usb_hid.c
     src/adc.c
-    src/debug_log.c # TODO: link only on Debug.
+    $<$<CONFIG:Debug>:src/debug_log.c>
 )
 
 target_include_directories(
