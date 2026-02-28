@@ -45,6 +45,7 @@ add_executable(
     src/main.c
     src/usb_hid.c
     src/adc.c
+    src/spi.c
     $<$<CONFIG:Debug>:src/debug_log.c>
 )
 
