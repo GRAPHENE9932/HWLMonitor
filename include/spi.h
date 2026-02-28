@@ -8,7 +8,9 @@
 
 #include <stdint.h>
 
-// Initializes SPI1 with PB0 being CS, PA5 - SCK and PA7 - MOSI.
+#define SPI1_CS_GPIO GPIOB
+#define SPI1_CS_PIN 0
+
 void spi1_init(void);
 
 void spi1_tx_byte(uint8_t data);
