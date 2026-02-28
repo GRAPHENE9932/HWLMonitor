@@ -65,7 +65,7 @@ void daq_task(void*) {
 // Enable GPIOA and GPIOB clock.
 // Enable DMA clock.
 void init_clock_tree(void) {
-    FLASH->ACR |= 0b001; // Set LATENCY to One wait state.
+    FLASH->ACR |= FLASH_ACR_PRFTBE | FLASH_ACR_LATENCY;
     RCC->CR2 |= RCC_CR2_HSI48ON; // Enable HSI48.
     while (!(RCC->CR2 & RCC_CR2_HSI48RDY)); // Wait for HSI48 to be ready.
     RCC->CFGR |= RCC_CFGR_SW_HSI48; // Switch SYSCLK to HSI48.
