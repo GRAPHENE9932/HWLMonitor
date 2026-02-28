@@ -48,7 +48,7 @@ static int32_t adc_calibrate(void) {
     uint32_t wait_time = 0;
     while ((ADC1->CR & ADC_CR_ADEN) != 0) {
         if (++wait_time >= ADC_CONFIG_TIMEOUT) {
-            return -ETIMEOUT;
+            return ETIMEOUT;
         }
     }
 
@@ -58,7 +58,7 @@ static int32_t adc_calibrate(void) {
     wait_time = 0;
     while ((ADC1->CR & ADC_CR_ADCAL) != 0) {
         if (++wait_time >= ADC_CONFIG_TIMEOUT) {
-            return -ETIMEOUT;
+            return ETIMEOUT;
         }
     }
 
@@ -73,7 +73,7 @@ static int32_t adc_enable(void) {
     uint32_t wait_time = 0;
     while ((RCC->CR2 & RCC_CR2_HSI14RDY) == 0) {
         if (++wait_time >= ADC_CONFIG_TIMEOUT) {
-            return -ETIMEOUT;
+            return ETIMEOUT;
         }
     }
 
@@ -86,7 +86,7 @@ static int32_t adc_enable(void) {
     wait_time = 0;
     while ((ADC1->ISR & ADC_ISR_ADRDY) == 0) {
         if (++wait_time >= ADC_CONFIG_TIMEOUT) {
-            return -ETIMEOUT;
+            return ETIMEOUT;
         }
     }
 
@@ -111,6 +111,9 @@ static void tim15_init(void) {
 
 int32_t adc_init(void) {
     mutex = xSemaphoreCreateMutexStatic(&mutex_mem);
+    if (xSemaphoreTake(mutex, portMAX_DELAY) != pdTRUE) {
+        return ERTOS;
+    }
 
     NVIC_EnableIRQ(DMA1_Channel1_IRQn);
     NVIC_EnableIRQ(ADC1_COMP_IRQn);
@@ -125,6 +128,10 @@ int32_t adc_init(void) {
 
     dma_init();
     tim15_init();
+
+    if (xSemaphoreGive(mutex) != pdTRUE) {
+        return ERTOS;
+    }
 
     return 0;
 }
@@ -170,7 +177,7 @@ int32_t adc_dma_acquire(
     uint16_t* data, uint16_t len, uint8_t channel, uint32_t desired_sp
 ) {
     if (xSemaphoreTake(mutex, portMAX_DELAY) != pdTRUE) {
-        return -ERTOS;
+        return ERTOS;
     }
 
     task_to_notify = xTaskGetCurrentTaskHandle();
@@ -213,32 +220,32 @@ void __attribute__((interrupt("IRQ"))) dma_ch1_handler(void) {
 
 int32_t adc_dma_wait(void) {
     if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(DMA_TIMEOUT_MS)) != 1) {
-        return -ETIMEOUT;
+        return ETIMEOUT;
     }
 
     uint32_t wait_time = 0;
     while ((ADC1->CR & ADC_CR_ADSTP) != 0) {
         if (++wait_time >= ADC_CONFIG_TIMEOUT) {
-            return -ETIMEOUT;
+            return ETIMEOUT;
         }
     }
 
     if (xSemaphoreGive(mutex) != pdTRUE) {
-        return -ERTOS;
+        return ERTOS;
     }
 
     if (dma_status == DMA_FREE) {
         return 0;
     } else if (dma_status == DMA_ERROR) {
-        return -EDMA;
+        return EDMA;
     } else {
-        return -EDMA;
+        return EDMA;
     }
 }
 
 int32_t adc_single_convert(uint8_t channel) {
     if (xSemaphoreTake(mutex, portMAX_DELAY) != pdTRUE) {
-        return -ERTOS;
+        return ERTOS;
     }
 
     task_to_notify = xTaskGetCurrentTaskHandle();
@@ -251,12 +258,12 @@ int32_t adc_single_convert(uint8_t channel) {
     ADC1->CR |= ADC_CR_ADSTART;
 
     if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(ADC_SINGLE_TIMEOUT_MS)) != 1) {
-        return -ETIMEOUT;
+        return ETIMEOUT;
     }
 
     const int32_t result = ADC1->DR;
     if (xSemaphoreGive(mutex) != pdTRUE) {
-        return -ERTOS;
+        return ERTOS;
     }
     return result;
 }
