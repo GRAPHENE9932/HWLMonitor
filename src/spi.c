@@ -79,7 +79,7 @@ void spi1_init(void) {
     spi1_init_cs();
 
     // Set baud rate to f_PCLK/4 (12 MHz) and enable master mode.
-    SPI1->CR1 = SPI_CR1_BR_0 | SPI_CR1_MSTR;
+    SPI1->CR1 = SPI_CR1_SSM | SPI_CR1_SSI | SPI_CR1_BR_0 | SPI_CR1_MSTR;
     // Set 8-bit data size, enable TX buffer empty interrupt and error
     // interrupt.
     SPI1->CR2 = SPI_CR2_DS_0 | SPI_CR2_DS_1 | SPI_CR2_DS_2 | SPI_CR2_ERRIE;
@@ -104,18 +104,26 @@ int32_t spi1_get_error(void) {
 void __attribute__((interrupt("IRQ"))) spi1_handler(void) {
     if ((SPI1->SR & SPI_SR_TXE) != 0) {
         
-    } else if ((SPI1->SR & SPI_SR_OVR)) {
+    }
+
+    if ((SPI1->SR & SPI_SR_OVR) != 0) {
         // Must be impossible since we are not receiving any data.
         SPI1->DR;
         SPI1->SR;
         cur_error = EOVR;
-    } else if ((SPI1->SR & SPI_SR_MODF)) {
+    }
+
+    if ((SPI1->SR & SPI_SR_MODF) != 0) {
         SPI1->CR1 |= SPI_CR1_MSTR;
         cur_error = EBUS;
-    } else if ((SPI1->SR & SPI_SR_CRCERR)) {
+    }
+
+    if ((SPI1->SR & SPI_SR_CRCERR) != 0) {
         // Must be impossible since we are not using CRC.
         cur_error = EBUS;
-    } else if ((SPI1->SR & SPI_SR_FRE)) {
+    }
+
+    if ((SPI1->SR & SPI_SR_FRE) != 0) {
         // Must be impossible since we are not using the TI frame format.
         cur_error = EBUS;
     }
