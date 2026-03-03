@@ -6,11 +6,9 @@
  * Accesses to ADC are protected with a mutex.
  */
 
-#include "stm32f072xb.h"
 #include <stdint.h>
 
 int32_t adc_init(void);
-void adc_init_port(GPIO_TypeDef* gpio, uint8_t port);
 
 // Returns the real sample period (sp) in nanoseconds that will be used during
 // data acquisition. Can return a negative value, indicating an error.

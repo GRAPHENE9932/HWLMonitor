@@ -10,6 +10,7 @@ enum Err : int32_t {
     ERTOS = -5,
     EBUS = -6,          // Generic communication bus error.
     EOVR = -7,          // Overrun.
+    EUNINIT = -8,
 };
 
 #endif // ERR_H
