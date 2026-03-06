@@ -88,13 +88,20 @@ FetchContent_MakeAvailable(
 add_custom_command(
     OUTPUT ${FONT_H}
     COMMAND python ${PROJECT_SOURCE_DIR}/scripts/ttf-to-header.py -i ${FONT_TTF} -o ${FONT_H}
+    DEPENDS ${PROJECT_SOURCE_DIR}/scripts/ttf-to-header.py
 )
 
-# Convert images to header.
 add_custom_command(
     OUTPUT ${IMAGES_H}
-    ALL
     COMMAND python ${PROJECT_SOURCE_DIR}/scripts/pngs-to-header.py -i ${IMAGES_FOLDER} -o ${IMAGES_H}
+    DEPENDS ${PROJECT_SOURCE_DIR}/scripts/pngs-to-header.py ${IMAGES_FOLDER}
+)
+
+add_custom_command(
+    TARGET hwlmonitor
+    POST_BUILD
+    COMMAND arm-none-eabi-objcopy -O binary hwlmonitor.elf firmware.bin
+    COMMAND arm-none-eabi-size hwlmonitor.elf
 )
 
 add_custom_target(generate_headers DEPENDS ${FONT_H} ${IMAGES_H})
@@ -103,6 +110,6 @@ add_dependencies(hwlmonitor generate_headers)
 set_target_properties(hwlmonitor PROPERTIES OUTPUT_NAME hwlmonitor.elf)
 add_custom_target(
     upload
-    COMMAND arm-none-eabi-objcopy -O binary hwlmonitor.elf firmware.bin
     COMMAND st-flash --reset write firmware.bin 0x08000000
+    DEPENDS hwlmonitor.elf
 )
