@@ -2,6 +2,10 @@
 
 // Only 1 division per digit!
 uint32_t i32_to_str(char* out, uint32_t buf_size, int32_t n) {
+    if (buf_size == 0) {
+        return 0;
+    }
+
     if (n == 0 && buf_size > 0) {
         out[0] = '0';
         return 1;
@@ -26,8 +30,11 @@ uint32_t i32_to_str(char* out, uint32_t buf_size, int32_t n) {
 
     off += len;
     while (n != 0) {
-        const uint8_t digit = n % 10;
-        n /= 10;
+        const int32_t next_n = n / 10;
+        // Same as n % 10, but apparently compiler (or me, who configured it)
+        // is stupid and even with -O3 would not reuse the devision above.
+        const uint8_t digit = n - next_n * 10;
+        n = next_n;
 
         --off;
         if (off < buf_size) {
