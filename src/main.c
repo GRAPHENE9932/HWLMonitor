@@ -1,5 +1,7 @@
 #include "usb_hid.h"
 #include "adc.h"
+#include "st7735.h"
+#include "utils.h"
 #include <FreeRTOS.h>
 #include <adc.h>
 #include <task.h>
@@ -21,7 +23,7 @@ void initialize_gpio(void) {
     GPIOA->ODR &= ~(GPIO_ODR_15);
 }
 
-void __attribute__((interrupt("IRQ"))) hard_fault_handler(void) {
+void hard_fault_handler(void) {
     while (true) {
         GPIOB->ODR ^= GPIO_ODR_5;
         for (volatile int i = 0; i < 100000; i++);
@@ -41,8 +43,8 @@ static uint16_t single_data;
 static bool done = false;
 
 void daq_task(void*) {
-    adc_init_port(GPIOA, 0);
-    adc_init_port(GPIOA, 1);
+    //adc_init_port(GPIOA, 0);
+    //adc_init_port(GPIOA, 1);
 
     int32_t err = 0;
     if ((err = adc_init()) < 0) {
@@ -61,6 +63,43 @@ void daq_task(void*) {
     }
 }
 
+const uint8_t DATA[] = {
+    0xDE, 0xAD, 0xBE, 0xEF,
+    0xDE, 0xAD, 0x0A, 0xA0,
+};
+
+char buf[] = { 'E', 'm', 'p', 't', 'y', '.', '.' };
+
+void spi_task(void*) {
+    st7735_init();
+
+    i32_to_str(0, 0, 0);
+
+    //st7735_clear(ST7735_COLOR(31, 0, 31));
+
+    struct st7735_text args = {
+        .text = buf,
+        .len = 7,
+        .fg = ST7735_COLOR(31, 63, 31),
+        .bg = ST7735_COLOR(31, 0, 0),
+        .x = 2,
+        .y = 0,
+        ._prev_len = 0,
+    };
+
+    static uint32_t i = 0;
+
+    st7735_output_text(&args);
+
+    while (1) {
+        //st7735_clear(ST7735_COLOR(0, 0, 0));
+        st7735_output_text(&args);
+        args.len = i32_to_str(args.text, 7, i++);
+        //st7735_clear(ST7735_COLOR(31, 0, 31));W
+        //st7735_clear(ST7735_COLOR(31, 63, 0));
+    }
+}
+
 // Use HSI48 for everything, also enable CRS.
 // Enable GPIOA and GPIOB clock.
 // Enable DMA clock.
@@ -76,8 +115,11 @@ void init_clock_tree(void) {
     RCC->CFGR3 &= ~RCC_CFGR3_USBSW; // Switch USB peripheral to HSI48.
     RCC->APB1ENR |= RCC_APB1ENR_USBEN; // Enable USB interface clock.
 
-    // Enable GPIOA and GPIOB.
-    RCC->AHBENR |= RCC_AHBENR_GPIOAEN | RCC_AHBENR_GPIOBEN;
+    RCC->AHBENR |= RCC_AHBENR_GPIOAEN | RCC_AHBENR_GPIOBEN | RCC_AHBENR_DMA1EN;
+    RCC->APB2ENR |= RCC_APB2ENR_SPI1EN | RCC_APB2ENR_TIM15EN |
+        RCC_APB2ENR_ADCEN;
+    RCC->CR2 |= RCC_CR2_HSI14ON;
+    while ((RCC->CR2 & RCC_CR2_HSI14RDY) == 0) {}
 }
 
 int main(void) {
@@ -92,8 +134,13 @@ int main(void) {
         NULL, 0, NULL
     );
 
+    //xTaskCreate(
+    //    daq_task, "daq", 64,
+    //    NULL, 1, NULL
+    //);
+
     xTaskCreate(
-        daq_task, "daq", 64,
+        spi_task, "spi", 64,
         NULL, 1, NULL
     );
 

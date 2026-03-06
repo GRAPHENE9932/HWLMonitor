@@ -43,10 +43,12 @@ add_executable(
 
     src/startup.s
     src/main.c
+    src/utils.c
     src/usb_hid.c
     src/adc.c
     src/spi.c
     src/gpio.c
+    src/st7735.c
     $<$<CONFIG:Debug>:src/debug_log.c>
 )
 

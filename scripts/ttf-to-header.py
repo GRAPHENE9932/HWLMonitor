@@ -14,15 +14,16 @@ import os
 
 BITMAP_WIDTH = 9
 BITMAP_HEIGHT = 16
-BITMAP_PADDED_HEIGHT = ((BITMAP_HEIGHT - 1) // 8 + 1) * 8
-BITMAP_SIZE_BYTES = BITMAP_WIDTH * BITMAP_PADDED_HEIGHT // 8
+BITMAP_PADDED_WIDTH = (BITMAP_WIDTH + 7) // 8 * 8
+BITMAP_SIZE_BYTES = BITMAP_PADDED_WIDTH * BITMAP_HEIGHT // 8
 
 CHARSET_BEGIN = 0x20
 CHARSET_END = 0x7F # Not including!
 CHARS_AMOUNT = CHARSET_END - CHARSET_BEGIN
 
 def rasterize_glyph(font, char):
-    image = Image.new("1", (BITMAP_WIDTH, BITMAP_HEIGHT), color=0) # "1" mode is 1 bit monochrome.
+    # "1" mode is 1 bit monochrome.
+    image = Image.new("1", (BITMAP_WIDTH, BITMAP_HEIGHT), color=0)
     image_draw = ImageDraw.Draw(image)
     image_draw.text((0, 0), chr(char), font=font, fill=1)
     return image
@@ -30,14 +31,10 @@ def rasterize_glyph(font, char):
 def image_to_bytes(image):
     result = [0] * (BITMAP_SIZE_BYTES)
 
-    for byte_i in range(len(result)):
-        x_pos = byte_i % BITMAP_WIDTH
-        y_pos = byte_i // BITMAP_WIDTH * 8
-
-        for bit in range(8):
-            cur_pixel = image.getpixel((x_pos, y_pos + bit))
-            if cur_pixel:
-                result[byte_i] |= (1 << bit)
+    for y in range(BITMAP_HEIGHT):
+        for x in range(BITMAP_WIDTH):
+            if image.getpixel((x, y)):
+                result[(y * BITMAP_PADDED_WIDTH + x) // 8] |= 1 << (x % 8)
     
     return result
 
@@ -83,10 +80,11 @@ def main():
 
 #include <stdint.h>
 
-#define FONT_BITMAP_SIZE {BITMAP_SIZE_BYTES}
 #define FONT_WIDTH {BITMAP_WIDTH}
-#define FONT_HEIGHT {BITMAP_PADDED_HEIGHT}
+#define FONT_PADDED_WIDTH {BITMAP_PADDED_WIDTH}
+#define FONT_HEIGHT {BITMAP_HEIGHT}
 #define FONT_FIRST_ASCII {CHARSET_BEGIN}
+#define FONT_BITMAP_SIZE (FONT_PADDED_WIDTH * FONT_HEIGHT / 8)
 
 {c_array}
 
