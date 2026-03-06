@@ -33,6 +33,7 @@ add_compile_options(
 )
 
 add_link_options(
+    -mcpu=${CPU}
     -mthumb
     -Wl,--gc-sections
     -T ${LINKER_SCRIPT}
