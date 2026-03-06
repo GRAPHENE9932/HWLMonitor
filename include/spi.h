@@ -15,16 +15,23 @@
 
 void spi1_init(void);
 
-// Returns either 0 or a negative error.
-int32_t spi1_tx_byte_sync(uint8_t data);
-// Transfers data with DMA. Blocks until the transfer is complete, but makes the
-// current task yield for the transmission time.
-// Returns either 0 or a negative error.
-int32_t spi1_tx(const uint8_t* data, uint32_t len);
+void spi1_tx_byte_sync(uint8_t data);
+void spi1_tx_hword_sync(uint16_t data);
+
+// Transfers data with DMA. If a previous transfer is still ongoing, blocks
+// (yields) until it finishes.
+void spi1_tx_async(const uint8_t* data, uint32_t len);
+
 // Transfers two bytes of <data> with DMA <repeats> times continuously. Blocks
 // until the transfer is complete, but makes the current task yield for the
 // transmission time.
-// Returns either 0 or a negative error.
-int32_t spi1_tx_repeating(uint16_t data, uint32_t repeats);
+void spi1_tx_repeating_hword_async(uint16_t data, uint32_t repeats);
+
+// Wait until the last asynchronous transmission finishes.
+void spi1_wait(void);
+
+// Returns and clears the last error that happened in the functions above.
+// Returns 0 if no errors took place.
+int32_t spi1_get_error(void);
 
 #endif // SPI_H
