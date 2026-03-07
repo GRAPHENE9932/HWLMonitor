@@ -50,7 +50,6 @@ add_executable(
     src/spi.c
     src/gpio.c
     src/st7735.c
-    $<$<CONFIG:Debug>:src/debug_log.c>
 )
 
 target_include_directories(
