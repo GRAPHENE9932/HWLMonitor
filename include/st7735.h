@@ -18,8 +18,8 @@
 #define ST7735_AO_GPIO GPIOA
 #define ST7735_AO_PIN 6
 
-#define ST7735_WIDTH 132
-#define ST7735_HEIGHT 162
+#define ST7735_WIDTH 162
+#define ST7735_HEIGHT 132
 
 typedef uint16_t color_t;
 
@@ -29,12 +29,19 @@ typedef uint16_t color_t;
 
 struct st7735_text {
     char* text;
-    uint32_t len;
+    uint16_t len;
     color_t fg;
     color_t bg;
-    uint32_t x;
-    uint32_t y;
-    uint32_t _prev_len;
+    uint16_t x;
+    uint16_t y;
+    uint16_t _prev_len;
+};
+
+struct st7735_rect {
+    uint16_t x;
+    uint16_t y;
+    uint16_t w;
+    uint16_t h;
 };
 
 void st7735_init(void);
@@ -50,6 +57,10 @@ static inline void st7735_init_text(struct st7735_text* text) {
     text->_prev_len = 0;
 }
 void st7735_output_text(struct st7735_text* text);
+
+// Expects data in ST7735_COLOR format preceded by two half words indicating
+// image width and height.
+void st7735_output_image(const uint16_t* image, uint32_t x, uint32_t y);
 
 int32_t st7735_get_error(void);
 

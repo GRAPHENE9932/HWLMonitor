@@ -18,9 +18,9 @@ void spi1_init(void);
 void spi1_tx_byte_sync(uint8_t data);
 void spi1_tx_hword_sync(uint16_t data);
 
-// Transfers data with DMA. If a previous transfer is still ongoing, blocks
-// (yields) until it finishes.
-void spi1_tx_async(const uint8_t* data, uint32_t len);
+// Transfers half-words with DMA. If a previous asynchronous transfer is still
+// ongoing, blocks (yields) until it finishes.
+void spi1_tx_async(const uint16_t* data, uint32_t len);
 
 // Transfers two bytes of <data> with DMA <repeats> times continuously. Blocks
 // until the transfer is complete, but makes the current task yield for the

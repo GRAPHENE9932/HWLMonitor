@@ -38,6 +38,8 @@ void spi1_init(void) {
 }
 
 void spi1_tx_byte_sync(uint8_t data) {
+    spi1_wait();
+
     SPI1->CR2 = (SPI1->CR2 & ~SPI_CR2_DS_Msk) | // Force 8-bit mode.
         SPI_CR2_DS_2 | SPI_CR2_DS_1 | SPI_CR2_DS_0;
     SPI1->CR1 |= SPI_CR1_SPE;
@@ -49,6 +51,8 @@ void spi1_tx_byte_sync(uint8_t data) {
 }
 
 void spi1_tx_hword_sync(uint16_t data) {
+    spi1_wait();
+
     SPI1->CR2 = (SPI1->CR2 & ~SPI_CR2_DS_Msk) | // Force 16-bit mode.
         SPI_CR2_DS_3 | SPI_CR2_DS_2 | SPI_CR2_DS_1 | SPI_CR2_DS_0;
     SPI1->CR1 |= SPI_CR1_SPE;
@@ -85,14 +89,15 @@ static void dma_tx_generic(
     SPI1->CR1 |= SPI_CR1_SPE;
 }
 
-void spi1_tx_async(const uint8_t* data, uint32_t len) {
+void spi1_tx_async(const uint16_t* data, uint32_t len) {
     dma_tx_generic(
         data, len,
-        // Set low priority (0b00), 8 bit memory and peripheral size, enable
+        // Set low priority (0b00), 16 bit memory and peripheral size, enable
         // memory increment mode, enable transfer error interrupt, enable
         // transfer complete interrupt.
-        DMA_CCR_MINC | DMA_CCR_DIR | DMA_CCR_TEIE | DMA_CCR_TCIE,
-        false
+        DMA_CCR_MSIZE_0 | DMA_CCR_PSIZE_0 | DMA_CCR_MINC | DMA_CCR_DIR |
+        DMA_CCR_TEIE | DMA_CCR_TCIE,
+        true
     );
 }
 

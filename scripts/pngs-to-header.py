@@ -1,45 +1,43 @@
 #
 # This Python script reads the PNG files in provided folder, extracts pixel data
-# and creates one C header file which contains a uint8_t array for each image.
+# and creates one C header file which contains a uint16_t array for each image.
 #
 # The name of each particular array is constructed as follows:
 # <file name without extension>_IMG
-# The pixel data is stored in 1-bit monochrome format, compatible with
-# HWLMonitor's display.
+# The first half word (2 bytes) of the array provides width of the image, the
+# second one - height. After these there is only raw pixel data, 16 bits per
+# pixel (R[15:11], G[10:5], B[4:0]).
 #
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from PIL import Image
 import os
 
-def image_to_bytes(image):
+def image_to_hwords(image):
     width, height = image.size
-    result = [0] * (width * ((height + 7) // 8))
+    result = [0] * (width * height)
 
-    for byte_i in range(len(result)):
-        x_pos = byte_i % width
-        y_pos = byte_i // width * 8
-
-        for bit in range(8):
-            cur_pixel = image.getpixel((x_pos, y_pos + bit))
-            if cur_pixel:
-                result[byte_i] |= (1 << bit)
+    for y in range(height):
+        for x in range(width):
+            r, g, b = image.getpixel((x, y))
+            # TODO: there is room for improvement: dithering.
+            result[y * width + x] = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3)
     
-    return [width, (height + 7) // 8] + result
+    return [width, height] + result
 
-def hex_1_byte(n):
-    return f"0x{n:02X}"
+def hex_hword(n):
+    return f"0x{n:04X}"
 
 def generate_c_array(image_file_path):
     image = Image.open(image_file_path)
-    bytes = image_to_bytes(image)
+    bytes = image_to_hwords(image)
     array_name = os.path.splitext(os.path.basename(image_file_path))[0] + "_IMG"
-    result = f"static const uint8_t {array_name}[{len(bytes)}] = {{"
+    result = f"static const uint16_t {array_name}[{len(bytes)}] = {{"
 
     for i in range(len(bytes)):
-        if i % 12 == 0:
+        if i % 10 == 0:
             result += "\n"
-        result += hex_1_byte(bytes[i])
+        result += hex_hword(bytes[i])
         result += ", "
     
     result += "};"
@@ -48,8 +46,8 @@ def generate_c_array(image_file_path):
 
 def main():
     arg_parser = ArgumentParser(description="""
-    This Python script reads the PNG files in provided folder, extracts pixel data
-    and creates one C header file which contains a uint8_t array for each image.
+    This Python script reads the PNG files in provided folder, extracts pixel
+    data and creates one C header file which contains a uint16_t array for each image.
     """, formatter_class=RawDescriptionHelpFormatter
     )
     arg_parser.add_argument("--input", "-i", metavar="<path to folder with images>", type=str, required=True)
