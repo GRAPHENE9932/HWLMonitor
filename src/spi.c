@@ -1,6 +1,7 @@
 #include "spi.h"
 #include "err.h"
 #include "gpio.h"
+#include "utils.h"
 #include <stm32f072xb.h>
 #include <FreeRTOS.h>
 #include <semphr.h>
@@ -10,7 +11,6 @@
 
 static volatile int32_t cur_error = 0;
 static volatile TaskHandle_t task_to_notify = NULL;
-static uint16_t data_to_repeat = 0;
 
 static void reset_hw(void) {
     RCC->APB2RSTR |= RCC_APB2RSTR_SPI1RST;
@@ -38,43 +38,33 @@ void spi1_init(void) {
 }
 
 void spi1_tx_byte_sync(uint8_t data) {
-    spi1_wait();
-
     SPI1->CR2 = (SPI1->CR2 & ~SPI_CR2_DS_Msk) | // Force 8-bit mode.
         SPI_CR2_DS_2 | SPI_CR2_DS_1 | SPI_CR2_DS_0;
     SPI1->CR1 |= SPI_CR1_SPE;
     SPI1_CS_GPIO->ODR &= ~(1 << SPI1_CS_PIN);
     *(uint8_t*)&(SPI1->DR) = data;
-    while (SPI1->SR & SPI_SR_BSY) {}
+    while (SPI1->SR & SPI_SR_BSY) {} // TODO: Add timeout management.
     SPI1_CS_GPIO->ODR |= 1 << SPI1_CS_PIN;
     SPI1->CR1 &= ~SPI_CR1_SPE;
 }
 
 void spi1_tx_hword_sync(uint16_t data) {
-    spi1_wait();
-
     SPI1->CR2 = (SPI1->CR2 & ~SPI_CR2_DS_Msk) | // Force 16-bit mode.
         SPI_CR2_DS_3 | SPI_CR2_DS_2 | SPI_CR2_DS_1 | SPI_CR2_DS_0;
     SPI1->CR1 |= SPI_CR1_SPE;
     SPI1_CS_GPIO->ODR &= ~(1 << SPI1_CS_PIN);
     *(uint16_t*)&(SPI1->DR) = data;
-    while (SPI1->SR & SPI_SR_BSY) {}
+    while (SPI1->SR & SPI_SR_BSY) {} // TODO: Add timeout management.
     SPI1_CS_GPIO->ODR |= 1 << SPI1_CS_PIN;
     SPI1->CR1 &= ~SPI_CR1_SPE;
 }
 
-static void dma_tx_generic(
-    const void* data, uint32_t len, uint32_t dma_ccr, bool spi_16_bit
-) {
-    spi1_wait();
+static void dma_tx_generic(const void* data, uint32_t len, uint32_t dma_ccr) {
+    task_to_notify = xTaskGetCurrentTaskHandle();
 
-    if (spi_16_bit) {
-        SPI1->CR2 = (SPI1->CR2 & ~SPI_CR2_DS_Msk) | SPI_CR2_DS_3 |
-            SPI_CR2_DS_2 | SPI_CR2_DS_1 | SPI_CR2_DS_0;
-    } else {
-        SPI1->CR2 = (SPI1->CR2 & ~SPI_CR2_DS_Msk) | SPI_CR2_DS_2 |
-            SPI_CR2_DS_1 | SPI_CR2_DS_0;
-    }
+    // Enable 16-bit mode for SPI.
+    SPI1->CR2 = (SPI1->CR2 & ~SPI_CR2_DS_Msk) | SPI_CR2_DS_3 | SPI_CR2_DS_2 |
+        SPI_CR2_DS_1 | SPI_CR2_DS_0;
 
     DMA1_Channel3->CCR &= ~DMA_CCR_EN;
     DMA1_Channel3->CPAR = (uint32_t)(&(SPI1->DR));
@@ -87,44 +77,43 @@ static void dma_tx_generic(
 
     SPI1->CR2 |= SPI_CR2_TXDMAEN;
     SPI1->CR1 |= SPI_CR1_SPE;
+
+    if (ulTaskNotifyTake(pdTRUE, MS_TO_TICKS_ATL2(DMA_TIMEOUT_MS)) != pdPASS) {
+        cur_error = ETIMEOUT;
+        return;
+    }
+
+    // TODO: add timeout management.
+    while (SPI1->SR & SPI_SR_FTLVL_Msk) {}
+    while (SPI1->SR & SPI_SR_BSY) {}
+
+    SPI1_CS_GPIO->ODR |= 1 << SPI1_CS_PIN;
+
+    DMA1_Channel3->CCR &= ~DMA_CCR_EN;
+    SPI1->CR1 &= ~SPI_CR1_SPE;
+    SPI1->CR2 &= ~SPI_CR2_TXDMAEN;
 }
 
-void spi1_tx_async(const uint16_t* data, uint32_t len) {
+void spi1_tx(const uint16_t* data, uint32_t len) {
     dma_tx_generic(
         data, len,
         // Set low priority (0b00), 16 bit memory and peripheral size, enable
         // memory increment mode, enable transfer error interrupt, enable
         // transfer complete interrupt.
         DMA_CCR_MSIZE_0 | DMA_CCR_PSIZE_0 | DMA_CCR_MINC | DMA_CCR_DIR |
-        DMA_CCR_TEIE | DMA_CCR_TCIE,
-        true
+        DMA_CCR_TEIE | DMA_CCR_TCIE
     );
 }
 
-void spi1_tx_repeating_hword_async(uint16_t data, uint32_t repeats) {
-    data_to_repeat = data;
+void spi1_tx_repeating_hword(uint16_t data, uint32_t repeats) {
     dma_tx_generic(
-        &data_to_repeat, repeats,
+        &data, repeats,
         // Set low priority (0b00), 16 bit memory and peripheral size, disable
         // memory increment mode, enable transfer error interrupt, enable
         // transfer complete interrupt.
         DMA_CCR_MSIZE_0 | DMA_CCR_PSIZE_0 | DMA_CCR_DIR | DMA_CCR_TEIE |
-        DMA_CCR_TCIE,
-        true
+        DMA_CCR_TCIE
     );
-}
-
-void spi1_wait(void) {
-    if (SPI1->SR & SPI_SR_BSY) {
-        // TODO: Address the situation, when the interrupt starts executing
-        // exactly between the previous and the next line.
-        task_to_notify = xTaskGetCurrentTaskHandle();
-
-        if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(DMA_TIMEOUT_MS)) != 1) {
-            cur_error = ETIMEOUT;
-            return;
-        }
-    }
 }
 
 int32_t spi1_get_error(void) {
@@ -160,30 +149,9 @@ void spi1_handler(void) {
     }
 }
 
-static void finish_dma_tx_isr(void) {
-    // It's theoretically impossible for this wait loop to block for more
-    // than 2.7 us, provided the SPI baud rate is 12 MHz and TXFIFO size is
-    // 32 bits. 
-    uint32_t iters = 0;
-    while (SPI1->SR & SPI_SR_FTLVL_Msk && SPI1->SR & SPI_SR_BSY) {
-        if (iters++ > 3 * configCPU_CLOCK_HZ / 1000000) {
-            cur_error = ETIMEOUT;
-            reset_hw();
-            return;
-        }
-    }
-
-    SPI1_CS_GPIO->ODR |= 1 << SPI1_CS_PIN;
-
-    DMA1_Channel3->CCR &= ~DMA_CCR_EN;
-    SPI1->CR1 &= ~SPI_CR1_SPE;
-    SPI1->CR2 &= ~SPI_CR2_TXDMAEN;
-}
-
 void dma_ch2_3_dma2_ch1_2_handler(void) {
     if (DMA1->ISR & DMA_ISR_TCIF3) {
         DMA1->IFCR |= DMA_IFCR_CTCIF3;
-        finish_dma_tx_isr();        
     } else if (DMA1->ISR & DMA_ISR_TEIF3) {
         DMA1->IFCR |= DMA_IFCR_CTEIF3;
         cur_error = EDMA;

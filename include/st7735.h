@@ -2,8 +2,10 @@
 #define ST7735_H
 
 /**
- * Takes over the peripherals spi.h uses, 
- * Uses 16-bit/pixel color depth.
+ * Takes over the peripherals spi.h uses and GPIO pins defined below.
+ * Uses 16-bit/pixel color depth and rotates the screen 90 deg cc.
+ *
+ * The functions support concurrent calls.
  */
 
 #include <stdint.h>
@@ -60,7 +62,7 @@ void st7735_output_text(struct st7735_text* text);
 
 // Expects data in ST7735_COLOR format preceded by two half words indicating
 // image width and height.
-void st7735_output_image(const uint16_t* image, uint32_t x, uint32_t y);
+void st7735_output_image(const color_t* image, uint32_t x, uint32_t y);
 
 int32_t st7735_get_error(void);
 
