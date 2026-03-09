@@ -24,7 +24,8 @@ struct segment {
     enum segment_kind kind;
 
     union {
-        color_t* image;
+        color_t* ram_data;
+        const color_t* ext_data;
         color_t fill_color;
     };
 };
@@ -92,11 +93,11 @@ static void sender_task(void*) {
             spi1_tx_repeating_hword(s.fill_color, s.rect.w * s.rect.h);
             break;
         case SEGMENT_EXTERN_IMAGE:
-            spi1_tx(s.image, s.rect.w * s.rect.h);
+            spi1_tx(s.ext_data, s.rect.w * s.rect.h);
             break;
         case SEGMENT_RAM_BUF_IMAGE:
-            spi1_tx(s.image, s.rect.w * s.rect.h);
-            err = xQueueSendToBack(ram_buf_queue, &s.image, 0);
+            spi1_tx(s.ram_data, s.rect.w * s.rect.h);
+            err = xQueueSendToBack(ram_buf_queue, &s.ram_data, 0);
             configASSERT(err == pdPASS);
             break;
         default:
@@ -203,9 +204,9 @@ void st7735_clear(color_t c) {
 
 static void draw_glyph(const struct segment* s, char c, color_t bg, color_t fg,
     uint32_t x, uint32_t y) {
-    for (uint32_t rel_y = 0; rel_y < FONT_HEIGHT; ++rel_y) {
+    for (uint32_t rel_y = 0; rel_y < s->rect.h; ++rel_y) {
         for (uint32_t rel_x = 0; rel_x < FONT_WIDTH; ++rel_x) {
-            s->image[(rel_y + y) * s->rect.w + x + rel_x] = ((
+            s->ram_data[(rel_y + y) * s->rect.w + x + rel_x] = ((
                 FONT_GLYPHS[c - FONT_FIRST_ASCII]
                 [(rel_y * FONT_PADDED_WIDTH / 8 + rel_x / 8)] >>
                 (rel_x % 8)
@@ -214,55 +215,62 @@ static void draw_glyph(const struct segment* s, char c, color_t bg, color_t fg,
     }
 }
 
-static void draw_empty_glyph(const struct segment* s, color_t bg, uint32_t x,
-    uint32_t y) {
-    for (uint32_t rel_y = 0; rel_y < FONT_HEIGHT; ++rel_y) {
-        for (uint32_t rel_x = 0; rel_x < FONT_WIDTH; ++rel_x) {
-            s->image[(rel_y + y) * s->rect.w + x + rel_x] = bg;
-        }
-    }
-}
+static uint32_t output_text_segment(struct st7735_text* t, uint32_t off) {
+    const uint8_t char_h =
+        t->height_cutoff == 0 ? FONT_HEIGHT : t->height_cutoff;
+    const uint32_t char_size = FONT_WIDTH * char_h * sizeof(color_t);
+    const uint32_t chars_in_seg =
+        min_u32(RAM_BUFFER_SIZE / char_size, t->len - off);
+    configASSERT(chars_in_seg > 0);
 
-void st7735_output_text(struct st7735_text* text) {
-    struct segment s = {
+    color_t* buf = NULL;
+    int32_t err = xQueueReceive(ram_buf_queue, &buf, portMAX_DELAY);
+    configASSERT(err == pdPASS);
+
+    const struct segment s = {
         .rect = {
-            .x = text->x, .y = text->y,
-            .w = FONT_WIDTH * text->len, .h = FONT_HEIGHT
+            .x = t->x + FONT_WIDTH * off, .y = t->y,
+            .w = chars_in_seg * FONT_WIDTH, .h = char_h
         },
         .kind = SEGMENT_RAM_BUF_IMAGE,
-        .image = NULL
+        .ram_data = buf
     };
 
-    uint32_t bytes_left = 0;
-    int32_t err = 0;
-
-    for (uint32_t i = 0, i_in_seg = 0; i < text->len; ++i, ++i_in_seg) {
-        const uint32_t char_size = FONT_WIDTH * FONT_HEIGHT * sizeof(color_t);
-
-        if (bytes_left < char_size) {
-            // Push the previous buffer to transmission and get a new one.
-            if (s.image != NULL) {
-                err = xQueueSendToBack(tx_queue, &s, portMAX_DELAY);
-                configASSERT(err == pdPASS);
-            }
-
-            err = xQueueReceive(ram_buf_queue, &s.image, portMAX_DELAY);
-            configASSERT(err == pdPASS);
-
-            bytes_left = RAM_BUFFER_SIZE;
-            i_in_seg = 0;
-        }
-
-        draw_glyph(&s, text->text[i], text->bg, text->fg, FONT_WIDTH * i_in_seg,
-            0);
-        
-        bytes_left -= char_size;
+    for (uint32_t i = 0; i < chars_in_seg; ++i) {
+        draw_glyph(&s, t->text[off + i], t->bg, t->fg, FONT_WIDTH * i, 0);
     }
 
-    if (bytes_left != RAM_BUFFER_SIZE) {
-        err = xQueueSendToBack(tx_queue, &s, portMAX_DELAY);
+    err = xQueueSendToBack(tx_queue, &s, portMAX_DELAY);
+    configASSERT(err == pdPASS);
+
+    return chars_in_seg;
+}
+
+void st7735_output_text(struct st7735_text* t) {
+    uint32_t i = 0;
+    while (i < t->len) {
+        i += output_text_segment(t, i);
+    }
+    
+    // Clear the space that was previously taken by this text.
+    if (i < t->prev_len) {
+        const uint8_t char_h =
+            t->height_cutoff == 0 ? FONT_HEIGHT : t->height_cutoff;
+
+        const struct segment s = {
+            .rect = {
+                .x = t->x + i * FONT_WIDTH, .y = t->y,
+                .w = (t->prev_len - i) * FONT_WIDTH, .h = char_h
+            },
+            .kind = SEGMENT_FILLED,
+            .fill_color = t->bg
+        };
+
+        const int32_t err = xQueueSendToBack(tx_queue, &s, portMAX_DELAY);
         configASSERT(err == pdPASS);
     }
+
+    t->prev_len = t->len;
 }
 
 void st7735_output_image(const color_t* image, uint32_t x, uint32_t y) {
@@ -272,7 +280,18 @@ void st7735_output_image(const color_t* image, uint32_t x, uint32_t y) {
             .w = image[0], .h = image[1]
         },
         .kind = SEGMENT_EXTERN_IMAGE,
-        .image = (color_t*)(image + 2) // I won't modify the image - I promise!
+        .ext_data = image + 2
+    };
+
+    int32_t err = xQueueSendToBack(tx_queue, &s, portMAX_DELAY);
+    configASSERT(err == pdPASS);
+}
+
+void st7735_output_rect(struct st7735_rect rect, color_t color) {
+    const struct segment s = {
+        .rect = rect,
+        .kind = SEGMENT_FILLED,
+        .fill_color = color
     };
 
     int32_t err = xQueueSendToBack(tx_queue, &s, portMAX_DELAY);

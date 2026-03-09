@@ -5,7 +5,8 @@
  * Takes over the peripherals spi.h uses and GPIO pins defined below.
  * Uses 16-bit/pixel color depth and rotates the screen 90 deg cc.
  *
- * The functions support concurrent calls.
+ * Has a queue for SPI transfers which is processed with a statically-allocated
+ * separate sender task. Supports concurrent calls.
  */
 
 #include <stdint.h>
@@ -30,13 +31,14 @@ typedef uint16_t color_t;
     (((color_t)r << 11) | ((color_t)g << 5) | (color_t)b)
 
 struct st7735_text {
-    char* text;
+    const char* text;
     uint16_t len;
     color_t fg;
     color_t bg;
     uint16_t x;
     uint16_t y;
-    uint16_t _prev_len;
+    uint16_t prev_len;
+    uint8_t height_cutoff;
 };
 
 struct st7735_rect {
@@ -48,21 +50,13 @@ struct st7735_rect {
 
 void st7735_init(void);
 void st7735_clear(color_t c);
-
-static inline void st7735_init_text(struct st7735_text* text) {
-    text->text = NULL;
-    text->len = 0;
-    text->fg = ST7735_COLOR(0, 0, 0);
-    text->bg = ST7735_COLOR(0, 0, 0);
-    text->x = 0;
-    text->y = 0;
-    text->_prev_len = 0;
-}
-void st7735_output_text(struct st7735_text* text);
+void st7735_output_text(struct st7735_text* t);
 
 // Expects data in ST7735_COLOR format preceded by two half words indicating
 // image width and height.
 void st7735_output_image(const color_t* image, uint32_t x, uint32_t y);
+
+void st7735_output_rect(struct st7735_rect rect, color_t color);
 
 int32_t st7735_get_error(void);
 
