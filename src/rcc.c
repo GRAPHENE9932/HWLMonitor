@@ -6,10 +6,13 @@ void rcc_switch_to_hsi(void) {
     uint32_t wait_time = 0u;
     while ((RCC->CR & RCC_CR_HSIRDY) == 0u) {
         if (++wait_time > 128u) { // HSI must stabilize after 2 us max.
-            NVIC_SystemReset(); // Fatal error.
+            rcc_sys_reset(); // Fatal error.
         }
     }
     RCC->CFGR &= ~RCC_CFGR_SW_Msk;
+
+    // Disable the prefetch buffer and wait states for FLASH.
+    FLASH->ACR &= (FLASH_ACR_PRFTBE | FLASH_ACR_LATENCY_Msk);
 }
 
 void rcc_start_lsi(void) {
