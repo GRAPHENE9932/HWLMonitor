@@ -1,0 +1,164 @@
+#include "fix32.h"
+
+#include <stdbool.h>
+
+static uint32_t trailing_zeroes(uint32_t x) { // TODO: stdc_trailing_zeros
+    uint32_t count = 0;
+    uint32_t cur_mask = 0xFFFFFFFF;
+    uint32_t cur_power = 32;
+
+    while (cur_power != 0) {
+        cur_power >>= 1;
+        cur_mask <<= cur_power;
+        if (!(x & cur_mask)) {
+            count += cur_power;
+            x <<= cur_power;
+        }
+    }
+
+    return count;
+}
+
+static uint32_t fix32_mul_unsigned(uint32_t a, uint32_t b) {
+    return (((a >> 16) * (b >> 16)) << 16) +
+        ((a >> 16) * (b & 0x0000FFFF)) +
+        ((b >> 16) * (a & 0x0000FFFF)) +
+        (((a & 0x0000FFFF) * (b & 0x0000FFFF)) >> 16);
+}
+
+fix32_t fix32_mul(fix32_t a, fix32_t b) {
+    if (a < 0 && b >= 0) {
+        return -fix32_mul_unsigned(-a, b);
+    }
+
+    if (a >= 0 && b < 0) {
+        return -fix32_mul_unsigned(a, -b);
+    }
+
+    if (a < 0 && b < 0) {
+        return fix32_mul_unsigned(-a, -b);
+    }
+
+    return fix32_mul_unsigned(a, b);
+}
+
+static uint32_t div_u48_by_u32(uint64_t a, uint64_t b) {
+    uint32_t result = 0;
+    uint32_t cur_power = trailing_zeroes(b) + 16;
+
+    while (true) {
+        if ((b << cur_power) <= a) {
+            result |= 1 << cur_power;
+            a -= b << cur_power;
+        }
+
+        if (cur_power-- == 0) {
+            break;
+        }
+    }
+
+    return result;
+}
+
+fix32_t fix32_div(fix32_t a, fix32_t b) {
+    uint32_t mod_a = a < 0 ? -a : a;
+    uint64_t shifted_a = ((uint64_t)mod_a) << 16;
+
+    if (a < 0 && b >= 0) {
+        return -div_u48_by_u32(shifted_a, b);
+    }
+
+    if (a >= 0 && b < 0) {
+        return -div_u48_by_u32(shifted_a, -b);
+    }
+
+    if (a < 0 && b < 0) {
+        return div_u48_by_u32(shifted_a, -b);
+    }
+
+    return div_u48_by_u32(shifted_a, b);
+}
+
+static const fix32_t INV_SQRT_TABLE[] = {
+    0x7FFFFFFF, // 1 / sqrt(0)
+    0x01000000, // 1 / sqrt(1/65536)
+    0x00B504F3, // 1 / sqrt(2/65536)
+    0x00800000, // 1 / sqrt(4/65536)
+    0x005A8279, // 1 / sqrt(8/65536)
+    0x00400000, // And so on
+    0x002D413C,
+    0x00200000,
+    0x0016A09E,
+    0x00100000,
+    0x000B504F,
+    0x00080000,
+    0x0005A827,
+    0x00040000,
+    0x0002D413,
+    0x00020000,
+    0x00016A09,
+    0x00010000,
+    0x0000B504,
+    0x00008000,
+    0x00005A82,
+    0x00004000,
+    0x00002D41,
+    0x00002000,
+    0x000016A0,
+    0x00001000,
+    0x00000B50,
+    0x00000800,
+    0x000005A8,
+    0x00000400,
+    0x000002D4,
+    0x00000200,
+    0x0000016A // 1 / sqrt(32768)
+};
+
+static fix32_t fix32_estimate_inv_sqrt(fix32_t num) {
+    // Special case, that can break further logic.
+    if (num == 0) {
+        return 0;
+    }
+
+    uint32_t i_begin = 32 - trailing_zeroes(num);
+    uint32_t i_end = i_begin + 1;
+
+    return INV_SQRT_TABLE[i_begin] +
+        fix32_mul(
+            (num - (1 << (i_begin - 1))) >> (i_begin - 1),
+            INV_SQRT_TABLE[i_end]
+        );
+}
+
+fix32_t fix32_sqrt(fix32_t num) {
+    fix32_t y = fix32_estimate_inv_sqrt(num);
+
+    fix32_t b = num;
+    fix32_t res = fix32_mul_unsigned(num, y);
+
+    // 4 iterations are tested to be enough for <=2% of relative error.
+    for (uint32_t i = 0; i < 4; i++) {
+        b = fix32_mul_unsigned(fix32_mul_unsigned(b, y), y);
+        y = (FIX32_CONST(3, 0, 0) - b) >> 1;
+        res = fix32_mul_unsigned(res, y);
+    }
+
+    return res;
+}
+
+fix32_t fix32_inv_sqrt(fix32_t num) {
+    fix32_t y = fix32_estimate_inv_sqrt(num);
+
+    fix32_t b = num;
+    fix32_t res = y;
+
+    // 4 iterations are tested to be enough for <=2% of relative error.
+    for (uint32_t i = 0; i < 4; i++) {
+        b = fix32_mul_unsigned(fix32_mul_unsigned(b, y), y);
+        y = (FIX32_CONST(3, 0, 0) - b) >> 1;
+        res = fix32_mul_unsigned(res, y);
+    }
+
+    return res;
+}

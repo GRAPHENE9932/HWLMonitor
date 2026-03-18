@@ -50,6 +50,12 @@ add_executable(
     src/spi.c
     src/gpio.c
     src/st7735.c
+    src/pwr_ctrl.c
+    src/delay.s
+    src/ui.c
+    src/rcc.c
+    src/rtc.c
+    src/gui/status_bar.c
     $<$<CONFIG:Debug>:src/debug_utils.c>
 )
 

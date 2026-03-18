@@ -77,5 +77,6 @@ void vAssertCalled(const char* file, int line);
 #define INCLUDE_xTaskAbortDelay                                 0
 #define INCLUDE_xTaskGetHandle                                  0
 #define INCLUDE_xTaskResumeFromISR                              1
+#define INCLUDE_xTaskDelayUntil                                 1
 
 #endif // FREERTOS_CONFIG_H

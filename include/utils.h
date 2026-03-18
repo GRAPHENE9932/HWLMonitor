@@ -15,6 +15,10 @@
 // than 1 tick equivalent time.
 #define MS_TO_TICKS_ATL2(ms) (MS_TO_TICKS(ms) > 2 ? MS_TO_TICKS(ms) : 2)
 
+static inline uint32_t min_u32(uint32_t a, uint32_t b) {
+    return a < b ? a : b;
+}
+
 // Returns amount of output characters.
 uint32_t i32_to_str(char* out, uint32_t buf_size, int32_t n);
 
