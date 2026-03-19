@@ -12,7 +12,7 @@
 static volatile int32_t cur_error = 0;
 static volatile TaskHandle_t task_to_notify = NULL;
 
-static void reset_hw(void) {
+void spi1_init(void) {
     RCC->APB2RSTR |= RCC_APB2RSTR_SPI1RST;
     RCC->APB2RSTR &= ~RCC_APB2RSTR_SPI1RST;
 
@@ -30,32 +30,36 @@ static void reset_hw(void) {
     NVIC_EnableIRQ(DMA1_Channel2_3_IRQn);
     NVIC_SetPriority(DMA1_Channel2_3_IRQn, 3);
 
-    SPI1_CS_GPIO->ODR |= 1 << SPI1_CS_PIN;
-}
-
-void spi1_init(void) {
-    reset_hw();
+    spi1_cs_hi();
 }
 
 void spi1_tx_byte_sync(uint8_t data) {
+    if (cur_error != 0) {
+        return;
+    }
+
     SPI1->CR2 = (SPI1->CR2 & ~SPI_CR2_DS_Msk) | // Force 8-bit mode.
         SPI_CR2_DS_2 | SPI_CR2_DS_1 | SPI_CR2_DS_0;
     SPI1->CR1 |= SPI_CR1_SPE;
-    SPI1_CS_GPIO->ODR &= ~(1 << SPI1_CS_PIN);
+    spi1_cs_lo();
     *(uint8_t*)&(SPI1->DR) = data;
     while (SPI1->SR & SPI_SR_BSY) {} // TODO: Add timeout management.
-    SPI1_CS_GPIO->ODR |= 1 << SPI1_CS_PIN;
+    spi1_cs_hi();
     SPI1->CR1 &= ~SPI_CR1_SPE;
 }
 
 void spi1_tx_hword_sync(uint16_t data) {
+    if (cur_error != 0) {
+        return;
+    }
+    
     SPI1->CR2 = (SPI1->CR2 & ~SPI_CR2_DS_Msk) | // Force 16-bit mode.
         SPI_CR2_DS_3 | SPI_CR2_DS_2 | SPI_CR2_DS_1 | SPI_CR2_DS_0;
     SPI1->CR1 |= SPI_CR1_SPE;
-    SPI1_CS_GPIO->ODR &= ~(1 << SPI1_CS_PIN);
+    spi1_cs_lo();
     *(uint16_t*)&(SPI1->DR) = data;
     while (SPI1->SR & SPI_SR_BSY) {} // TODO: Add timeout management.
-    SPI1_CS_GPIO->ODR |= 1 << SPI1_CS_PIN;
+    spi1_cs_hi();
     SPI1->CR1 &= ~SPI_CR1_SPE;
 }
 
@@ -73,7 +77,7 @@ static void dma_tx_generic(const void* data, uint32_t len, uint32_t dma_ccr) {
     DMA1_Channel3->CCR = dma_ccr;
     DMA1_Channel3->CCR |= DMA_CCR_EN;
 
-    SPI1_CS_GPIO->ODR &= ~(1 << SPI1_CS_PIN);
+    spi1_cs_lo();
 
     SPI1->CR2 |= SPI_CR2_TXDMAEN;
     SPI1->CR1 |= SPI_CR1_SPE;
@@ -87,7 +91,7 @@ static void dma_tx_generic(const void* data, uint32_t len, uint32_t dma_ccr) {
     while (SPI1->SR & SPI_SR_FTLVL_Msk) {}
     while (SPI1->SR & SPI_SR_BSY) {}
 
-    SPI1_CS_GPIO->ODR |= 1 << SPI1_CS_PIN;
+    spi1_cs_hi();
 
     DMA1_Channel3->CCR &= ~DMA_CCR_EN;
     SPI1->CR1 &= ~SPI_CR1_SPE;
@@ -95,6 +99,10 @@ static void dma_tx_generic(const void* data, uint32_t len, uint32_t dma_ccr) {
 }
 
 void spi1_tx(const uint16_t* data, uint32_t len) {
+    if (cur_error != 0) {
+        return;
+    }
+
     dma_tx_generic(
         data, len,
         // Set low priority (0b00), 16 bit memory and peripheral size, enable
@@ -106,6 +114,10 @@ void spi1_tx(const uint16_t* data, uint32_t len) {
 }
 
 void spi1_tx_repeating_hword(uint16_t data, uint32_t repeats) {
+    if (cur_error != 0) {
+        return;
+    }
+
     dma_tx_generic(
         &data, repeats,
         // Set low priority (0b00), 16 bit memory and peripheral size, disable
@@ -133,19 +145,16 @@ void spi1_handler(void) {
     if (SPI1->SR & SPI_SR_MODF) {
         SPI1->CR1 |= SPI_CR1_MSTR;
         cur_error = EBUS;
-        reset_hw();
     }
 
     if (SPI1->SR & SPI_SR_CRCERR) {
         // Must be impossible since we are not using CRC.
         cur_error = EBUS;
-        reset_hw();
     }
 
     if (SPI1->SR & SPI_SR_FRE) {
         // Must be impossible since we are not using the TI frame format.
         cur_error = EBUS;
-        reset_hw();
     }
 }
 
@@ -155,7 +164,6 @@ void dma_ch2_3_dma2_ch1_2_handler(void) {
     } else if (DMA1->ISR & DMA_ISR_TEIF3) {
         DMA1->IFCR |= DMA_IFCR_CTEIF3;
         cur_error = EDMA;
-        reset_hw();
     }
 
     if (task_to_notify != NULL) {

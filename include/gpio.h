@@ -59,7 +59,17 @@ enum gpio_pull_up_down : uint32_t {
 // gpio_speed and gpio_pull_up_down.
 void gpio_init(GPIO_TypeDef* gpio, uint8_t pin, uint32_t attrs, uint32_t af);
 
-// TODO: gpio in, gpio out.
+inline static void gpio_write_hi(GPIO_TypeDef* gpio, uint8_t pin) {
+    gpio->ODR |= 1u << pin;
+}
+
+inline static void gpio_write_lo(GPIO_TypeDef* gpio, uint8_t pin) {
+    gpio->ODR &= ~(1u << pin);
+}
+
+inline static bool gpio_read(GPIO_TypeDef* gpio, uint8_t pin) {
+    return gpio->IDR & (1u << pin);
+}
 
 enum exti_attrs : uint32_t {
     EXTI_EVENT = 0x01u,

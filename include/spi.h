@@ -8,6 +8,7 @@
  * task.
  */
 
+#include "gpio.h"
 #include <stdint.h>
 
 #define SPI1_CS_GPIO GPIOB
@@ -26,6 +27,14 @@ void spi1_tx(const uint16_t* data, uint32_t len);
 // until the transfer is complete, but makes the current task yield for the
 // transmission time.
 void spi1_tx_repeating_hword(uint16_t data, uint32_t repeats);
+
+static inline void spi1_cs_lo(void) {
+    gpio_write_lo(SPI1_CS_GPIO, SPI1_CS_PIN);
+}
+
+static inline void spi1_cs_hi(void) {
+    gpio_write_hi(SPI1_CS_GPIO, SPI1_CS_PIN);
+}
 
 // Returns and clears the last error that happened in the functions above.
 // Returns 0 if no errors took place.

@@ -60,15 +60,15 @@ static void handle_error(int32_t err) {
 }
 
 static void send_set_window(const struct st7735_rect* rect) {
-    ST7735_AO_GPIO->ODR &= ~(1 << ST7735_AO_PIN);
+    gpio_write_lo(ST7735_AO_GPIO, ST7735_AO_PIN);
     spi1_tx_byte_sync(0x2A); // Column Address Set.
-    ST7735_AO_GPIO->ODR |= 1 << ST7735_AO_PIN;
+    gpio_write_hi(ST7735_AO_GPIO, ST7735_AO_PIN);
     spi1_tx_hword_sync(rect->x);
     spi1_tx_hword_sync(rect->x + rect->w - 1);
 
-    ST7735_AO_GPIO->ODR &= ~(1 << ST7735_AO_PIN);
+    gpio_write_lo(ST7735_AO_GPIO, ST7735_AO_PIN);
     spi1_tx_byte_sync(0x2B); // Row Address Set.
-    ST7735_AO_GPIO->ODR |= 1 << ST7735_AO_PIN;
+    gpio_write_hi(ST7735_AO_GPIO, ST7735_AO_PIN);
     spi1_tx_hword_sync(rect->y);
     spi1_tx_hword_sync(rect->y + rect->h - 1);
 }
@@ -83,10 +83,9 @@ static void sender_task(void*) {
 
         send_set_window(&s.rect);
 
-        ST7735_AO_GPIO->ODR &= ~(1 << ST7735_AO_PIN);
+        gpio_write_lo(ST7735_AO_GPIO, ST7735_AO_PIN);
         spi1_tx_byte_sync(0x2C); // Memory Write.
-
-        ST7735_AO_GPIO->ODR |= 1 << ST7735_AO_PIN;
+        gpio_write_hi(ST7735_AO_GPIO, ST7735_AO_PIN);
 
         switch (s.kind) {
         case SEGMENT_FILLED:
@@ -113,9 +112,9 @@ static void sender_task(void*) {
 }
 
 static inline void send_cmd_with_arg(uint8_t cmd, uint8_t arg) {
-    ST7735_AO_GPIO->ODR &= ~(1 << ST7735_AO_PIN);
+    gpio_write_lo(ST7735_AO_GPIO, ST7735_AO_PIN);
     spi1_tx_byte_sync(cmd);
-    ST7735_AO_GPIO->ODR |= 1 << ST7735_AO_PIN;
+    gpio_write_hi(ST7735_AO_GPIO, ST7735_AO_PIN);
     spi1_tx_byte_sync(arg);
 }
 
@@ -131,18 +130,24 @@ void st7735_init(void) {
 
     spi1_init();
 
-    ST7735_EN_GPIO->ODR |= 1 << ST7735_EN_PIN; // Power up the MOSFET.
-
-    ST7735_RES_GPIO->ODR &= ~(1 << ST7735_RES_PIN); // Do a reset.
+    // Firstly power down and only after a delay power up the MOSFET to do a
+    // hardware power reset.
+    gpio_write_lo(ST7735_EN_GPIO, ST7735_EN_PIN);
     vTaskDelay(MS_TO_TICKS(2));
-    ST7735_RES_GPIO->ODR |= 1 << ST7735_RES_PIN;
+    gpio_write_hi(ST7735_EN_GPIO, ST7735_EN_PIN);
 
-    SPI1_CS_GPIO->ODR |= 1 << SPI1_CS_PIN; // Part of the reset sequence.
+    // Do a reset.
+    gpio_write_lo(ST7735_RES_GPIO, ST7735_RES_PIN);
     vTaskDelay(MS_TO_TICKS(2));
-    SPI1_CS_GPIO->ODR &= ~(1 << SPI1_CS_PIN);
+    gpio_write_hi(ST7735_RES_GPIO, ST7735_RES_PIN);
+
+    // Part of the reset sequence.
+    spi1_cs_hi();
+    vTaskDelay(MS_TO_TICKS(2));
+    spi1_cs_lo();
 
     // Sleep Out.
-    ST7735_AO_GPIO->ODR &= ~(1 << ST7735_AO_PIN);
+    gpio_write_lo(ST7735_AO_GPIO, ST7735_AO_PIN);
     spi1_tx_byte_sync(0x11);
     vTaskDelay(MS_TO_TICKS(120));
 
@@ -185,7 +190,7 @@ void st7735_init(void) {
         return;
     }
 
-    ST7735_LED_GPIO->ODR |= 1 << ST7735_LED_PIN;
+    gpio_write_hi(ST7735_LED_GPIO, ST7735_LED_PIN);
 }
 
 void st7735_clear(color_t c) {
@@ -198,7 +203,8 @@ void st7735_clear(color_t c) {
         .fill_color = c
     };
 
-    int32_t err = xQueueSendToBack(tx_queue, &s, portMAX_DELAY);
+    [[maybe_unused]] const int32_t err =
+        xQueueSendToBack(tx_queue, &s, portMAX_DELAY);
     configASSERT(err == pdPASS);
 }
 
@@ -224,7 +230,8 @@ static uint32_t output_text_segment(struct st7735_text* t, uint32_t off) {
     configASSERT(chars_in_seg > 0);
 
     color_t* buf = NULL;
-    int32_t err = xQueueReceive(ram_buf_queue, &buf, portMAX_DELAY);
+    [[maybe_unused]] int32_t err =
+        xQueueReceive(ram_buf_queue, &buf, portMAX_DELAY);
     configASSERT(err == pdPASS);
 
     const struct segment s = {
@@ -266,7 +273,8 @@ void st7735_output_text(struct st7735_text* t) {
             .fill_color = t->bg
         };
 
-        const int32_t err = xQueueSendToBack(tx_queue, &s, portMAX_DELAY);
+        [[maybe_unused]] const int32_t err =
+            xQueueSendToBack(tx_queue, &s, portMAX_DELAY);
         configASSERT(err == pdPASS);
     }
 
@@ -283,7 +291,8 @@ void st7735_output_image(const color_t* image, uint32_t x, uint32_t y) {
         .ext_data = image + 2
     };
 
-    int32_t err = xQueueSendToBack(tx_queue, &s, portMAX_DELAY);
+    [[maybe_unused]] const int32_t err =
+        xQueueSendToBack(tx_queue, &s, portMAX_DELAY);
     configASSERT(err == pdPASS);
 }
 
@@ -294,7 +303,8 @@ void st7735_output_rect(struct st7735_rect rect, color_t color) {
         .fill_color = color
     };
 
-    int32_t err = xQueueSendToBack(tx_queue, &s, portMAX_DELAY);
+    [[maybe_unused]] const int32_t err =
+        xQueueSendToBack(tx_queue, &s, portMAX_DELAY);
     configASSERT(err == pdPASS);
 }
 
