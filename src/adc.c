@@ -117,13 +117,15 @@ void adc_init(void) {
     NVIC_EnableIRQ(DMA1_Channel1_IRQn);
     NVIC_SetPriority(DMA1_Channel1_IRQn, 3);
 
-    uint32_t ecode = 0;
+    int32_t ecode = 0;
     if ((ecode = adc_calibrate())) {
         cur_error = ecode;
+        xSemaphoreGive(mutex);
         return;
     }
     if ((ecode = adc_enable())) {
         cur_error = ecode;
+        xSemaphoreGive(mutex);
         return;
     }
 
@@ -275,6 +277,7 @@ uint16_t adc_one_shot(uint8_t channel) {
         return 0; 
     }
     if (cur_error != 0) {
+        xSemaphoreGive(mutex);
         return 0;
     }
 
