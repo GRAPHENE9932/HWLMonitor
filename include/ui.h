@@ -44,6 +44,13 @@ bool ui_get_click(enum ui_btn btn);
 
 TickType_t ui_last_poll(void);
 
+// Consumes the clicks, that is, ui_get_click won't receive them.
 void ui_set_callback(enum ui_btn btn, void (*func)(void));
+
+// Waits for a click of a button and returns when any button is clicked. This
+// function must not be called from several tasks concurrently, otherwise, the
+// second task will hang here. Consumes a click, that is, ui_get_click won't
+// receive it.
+enum ui_btn ui_wait_click(void);
 
 #endif // UI_H

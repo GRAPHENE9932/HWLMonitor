@@ -318,6 +318,8 @@ static void epnr_set(volatile uint16_t* epnr, uint16_t value, uint16_t mask) {
 }
 
 void usb_init(void) {
+    RCC->CFGR3 &= ~RCC_CFGR3_USBSW; // Switch USB peripheral to HSI48.
+    RCC->APB1ENR |= RCC_APB1ENR_USBEN; // Enable USB interface clock.
     RCC->APB1RSTR &= ~RCC_APB1RSTR_USBRST; // Release reset.
     USB->CNTR &= ~USB_CNTR_PDWN; // Power up USB peripheral.
     // Wait 1 us for the USB peripheral to power up.

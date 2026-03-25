@@ -11,7 +11,6 @@
 
 #define TASK_STACK_DEPTH 128
 
-#define HEIGHT 16
 #define BG_COLOR ST7735_COLOR(0, 0, 0)
 #define TEXT_POS_X 1
 #define TEXT_POS_Y 2
@@ -35,7 +34,7 @@ static struct st7735_text text = {
     .x = TEXT_POS_X, .y = TEXT_POS_Y,
     .fg = TEXT_COLOR, .bg = BG_COLOR,
     .text = NULL, .len = 0, .prev_len = 0,
-    .height_cutoff = HEIGHT - TEXT_POS_Y
+    .height_cutoff = STATUS_BAR_HEIGHT - TEXT_POS_Y
 };
 
 static void redraw_text(void) {
@@ -84,7 +83,7 @@ static void update_battery(void) {
 
 void status_bar_full_redraw(void) {
     const struct st7735_rect rect = {
-        .x = 0, .y = 0, .w = ST7735_WIDTH, .h = HEIGHT
+        .x = 0, .y = 0, .w = ST7735_WIDTH, .h = STATUS_BAR_HEIGHT
     };
 
     st7735_output_rect(rect, BG_COLOR);

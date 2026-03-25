@@ -13,9 +13,10 @@
 
 #define PWR_CTRL_IWDG_MS 2000u
 
+void pwr_ctrl_start_iwdg(void);
 // UI (user input) must be initialized before calling. ADC must be initialized
 // at most PWR_CTRL_IWDG_MS/2 after.
-void pwr_ctrl_init(void); // TODO: split into start_iwdg and start_task.
+void pwr_ctrl_start_task(void);
 
 // Returns the last recorded battery voltage in volts.
 fix32_t pwr_ctrl_bat_voltage(void);

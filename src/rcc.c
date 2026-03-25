@@ -15,6 +15,16 @@ void rcc_switch_to_hsi(void) {
     FLASH->ACR &= (FLASH_ACR_PRFTBE | FLASH_ACR_LATENCY_Msk);
 }
 
+void rcc_switch_to_hsi48(void) {
+    FLASH->ACR |= FLASH_ACR_PRFTBE | FLASH_ACR_LATENCY;
+    RCC->CR2 |= RCC_CR2_HSI48ON;
+    while (!(RCC->CR2 & RCC_CR2_HSI48RDY)) {} // TODO: timeout.
+    RCC->CFGR |= RCC_CFGR_SW_HSI48; // Switch SYSCLK to HSI48.
+    while ((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_HSI48) {} // TODO: timeout
+
+    CRS->CR |= CRS_CR_AUTOTRIMEN; // Enable autotrimming for CRS for HSI48.
+}
+
 void rcc_start_lsi(void) {
     RCC->CSR |= RCC_CSR_LSION;
     while ((RCC->CSR & RCC_CSR_LSIRDY) == 0u) {} // TODO: timeout.

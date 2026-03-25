@@ -21,7 +21,27 @@ static StackType_t poll_task_stack[POLL_TASK_STACK_DEPTH];
 static StaticTask_t poll_task_mem;
 static TickType_t last_poll;
 
+static TaskHandle_t waiting_task = NULL;
 static struct btn_state states[UI_BTN_AMOUNT] = { 0 };
+
+static void handle_click(enum ui_btn btn) {
+    bool consumed = false;
+
+    if (states[btn].callback != NULL) {
+        consumed = true;
+        states[btn].callback();
+    }
+
+    if (waiting_task != NULL) {
+        consumed = true;
+        [[maybe_unused]] uint32_t ret =
+            xTaskNotify(waiting_task, btn, eSetValueWithOverwrite);
+        configASSERT(ret == pdPASS);
+        waiting_task = NULL;
+    }
+
+    states[btn].clicked = !consumed;
+}
 
 static void poll_btn(enum ui_btn btn) {
     if ((UI_BTN_GPIO[btn]->IDR & (1u << UI_BTN_PIN[btn])) == 0u) {
@@ -30,10 +50,7 @@ static void poll_btn(enum ui_btn btn) {
         }
         
         if (states[btn].count == BTN_TRIG_PRESS) {
-            states[btn].clicked = true;
-            if (states[btn].callback != NULL) {
-                states[btn].callback();
-            }
+            handle_click(btn);
             states[btn].pressed = true;
         }
     } else {
@@ -97,4 +114,33 @@ TickType_t ui_last_poll(void) {
 void ui_set_callback(enum ui_btn btn, void (*func)(void)) {
     configASSERT(func != NULL);
     states[btn].callback = func;
+}
+
+enum ui_btn ui_wait_click(void) {
+    // If there is a button clicked, return right away.
+    for (uint32_t i = 0u; i < UI_BTN_AMOUNT; ++i) {
+        taskENTER_CRITICAL();
+        if (states[i].clicked) {
+            states[i].clicked = false;
+            taskEXIT_CRITICAL();
+            return i;
+        }
+        taskEXIT_CRITICAL();
+    }
+
+    taskENTER_CRITICAL();
+    if (waiting_task != NULL) {
+        taskEXIT_CRITICAL();
+        configASSERT(false);
+        while (true) {}
+    }
+    waiting_task = xTaskGetCurrentTaskHandle();
+    taskEXIT_CRITICAL();
+    
+    uint32_t btn = 0u;
+    [[maybe_unused]] const uint32_t ret =
+        xTaskNotifyWait(0u, 0xFFFFFFFFu, &btn, portMAX_DELAY);
+    configASSERT(ret == pdTRUE);
+
+    return btn;
 }

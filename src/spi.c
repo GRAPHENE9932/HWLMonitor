@@ -15,6 +15,8 @@ static volatile TaskHandle_t task_to_notify = NULL;
 void spi1_init(void) {
     RCC->APB2RSTR |= RCC_APB2RSTR_SPI1RST;
     RCC->APB2RSTR &= ~RCC_APB2RSTR_SPI1RST;
+    RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
+    RCC->AHBENR |= RCC_AHBENR_DMA1EN;
 
     gpio_init(GPIOA, 5, GPIO_AF | GPIO_SPEED_HIGH, 0);
     gpio_init(GPIOA, 7, GPIO_AF | GPIO_SPEED_HIGH, 0);

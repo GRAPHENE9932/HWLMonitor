@@ -47,6 +47,11 @@ static void check_batv(void) {
 }
 
 static void iwdg_start_3s(void) {
+#ifndef NDEBUG
+    RCC->APB2ENR |= RCC_APB2ENR_DBGMCUEN;
+    DBGMCU->APB1FZ |= DBGMCU_APB1_FZ_DBG_IWDG_STOP;
+#endif
+
     taskENTER_CRITICAL();
 
     IWDG->KR = 0x0000CCCCu;
@@ -85,11 +90,14 @@ static void pwr_ctrl_task(void*) {
     }
 }
 
-void pwr_ctrl_init(void) {
+void pwr_ctrl_start_iwdg(void) {
+    iwdg_start_3s();
+}
+
+void pwr_ctrl_start_task(void) {
     configASSERT(UI_BTN_GPIO[BTN_PWR] == BTN_PWR_GPIO);
     configASSERT(UI_BTN_PIN[BTN_PWR] == BTN_PWR_PIN);
 
-    iwdg_start_3s();
     gpio_init(BATV_AIN_GPIO, BATV_AIN_PIN, GPIO_ANALOG, 0u);
     ui_set_callback(BTN_PWR, pwr_ctrl_power_off);
 

@@ -2,6 +2,7 @@
 #define STATUS_BAR_H
 
 #define STATUS_BAR_UPDATE_PERIOD_MS 1000
+#define STATUS_BAR_HEIGHT 16
 
 // Initializes and starts the status bar task which updates the status bar
 // periodically.

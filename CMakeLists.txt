@@ -44,6 +44,7 @@ add_executable(
 
     src/startup.s
     src/main.c
+    src/main_task.c
     src/utils.c
     src/usb_hid.c
     src/adc.c
@@ -56,6 +57,7 @@ add_executable(
     src/rcc.c
     src/rtc.c
     src/gui/status_bar.c
+    src/gui/menu.c
     $<$<CONFIG:Debug>:src/debug_utils.c>
 )
 

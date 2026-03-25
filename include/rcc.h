@@ -5,6 +5,7 @@
 #include <stdnoreturn.h>
 
 void rcc_switch_to_hsi(void);
+void rcc_switch_to_hsi48(void);
 void rcc_start_lsi(void);
 
 static inline noreturn void rcc_sys_reset(void) {

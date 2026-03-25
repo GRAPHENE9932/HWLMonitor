@@ -1,4 +1,5 @@
 #include "gpio.h"
+#include "FreeRTOSConfig.h"
 #include <stddef.h>
 
 #define GPIO_INDEX(gpiox) (                                                    \
@@ -11,6 +12,22 @@
 )
 
 void gpio_init(GPIO_TypeDef* gpio, uint8_t pin, uint32_t attrs, uint32_t af) {
+    if (gpio == GPIOA) {
+        RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
+    } else if (gpio == GPIOB) {
+        RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
+    } else if (gpio == GPIOC) {
+        RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
+    } else if (gpio == GPIOD) {
+        RCC->AHBENR |= RCC_AHBENR_GPIODEN;
+    } else if (gpio == GPIOE) {
+        RCC->AHBENR |= RCC_AHBENR_GPIOEEN;
+    } else if (gpio == GPIOF) {
+        RCC->AHBENR |= RCC_AHBENR_GPIOFEN;
+    } else {
+        configASSERT(false);
+    }
+
     gpio->OTYPER &= ~(GPIO_OTYPER_OT_0 << pin);
     gpio->OTYPER |= ((attrs & 0x0000FF00) >> 8) << pin;
 
