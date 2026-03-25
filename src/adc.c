@@ -73,7 +73,7 @@ static int32_t adc_enable(void) {
     }
 
     ADC->CCR = ADC_CCR_VBATEN | ADC_CCR_TSEN | ADC_CCR_VREFEN;
-    ADC1->CR |= ADC_CR_ADEN; // TODO: read the errata on that.
+    ADC1->CR |= ADC_CR_ADEN;
 
     uint32_t wait_time = 0;
     while ((ADC1->ISR & ADC_ISR_ADRDY) == 0) {
@@ -108,6 +108,9 @@ void adc_init(void) {
     DMA1->IFCR |= DMA_IFCR_CGIF1; // TODO: read errata on that.
     RCC->APB2RSTR |= RCC_APB2RSTR_ADC1RST | RCC_APB2RSTR_TIM15RST;
     RCC->APB2RSTR &= ~(RCC_APB2RSTR_ADC1RST | RCC_APB2RSTR_TIM15RST);
+    RCC->APB2ENR |= RCC_APB2ENR_ADCEN | RCC_APB2ENR_TIM15EN;
+    RCC->CR2 |= RCC_CR2_HSI14ON;
+    while ((RCC->CR2 & RCC_CR2_HSI14RDY) == 0) {} // TODO: timeout.
 
     NVIC_EnableIRQ(ADC1_COMP_IRQn);
     NVIC_SetPriority(ADC1_COMP_IRQn, 3);
