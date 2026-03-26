@@ -111,7 +111,7 @@ void status_bar_init(void) {
     configASSERT(mutex != NULL);
 
     task_handle = xTaskCreateStatic(updater_task, "bar", TASK_STACK_DEPTH, NULL,
-        2, task_stack, &task_mem);
+        1u, task_stack, &task_mem);
     configASSERT(task_handle != NULL);
 }
 
