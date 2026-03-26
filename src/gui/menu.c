@@ -11,6 +11,10 @@
 #define IMG_POS_Y 24u
 #define NAME_POS_X IMG_POS_X
 #define NAME_POS_Y (IMG_POS_Y + 64u)
+#define ARROW_LEFT_POS_X 1u
+#define ARROW_LEFT_POS_Y NAME_POS_Y
+#define ARROW_RIGHT_POS_X (ST7735_WIDTH - 9u)
+#define ARROW_RIGHT_POS_Y NAME_POS_Y
 #define BG_COLOR ST7735_COLOR(6u, 12u, 6u)
 #define NAME_COLOR ST7735_COLOR(29u, 59u, 29u)
 
@@ -39,8 +43,9 @@ enum menu_mode menu_start(enum menu_mode cur) {
         .x = 0u, .y = STATUS_BAR_HEIGHT,
         .w = ST7735_WIDTH, .h = ST7735_WIDTH - STATUS_BAR_HEIGHT
     };
-
     st7735_output_rect(BG_RECT, BG_COLOR);
+    st7735_output_image(ARROW_LEFT_IMG, ARROW_LEFT_POS_X, ARROW_LEFT_POS_Y);
+    st7735_output_image(ARROW_RIGHT_IMG, ARROW_RIGHT_POS_X, ARROW_RIGHT_POS_Y);
 
     struct st7735_text name_text = {
         .text = MODE_NAMES[cur],
