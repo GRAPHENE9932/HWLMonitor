@@ -48,7 +48,6 @@ void vAssertCalled(const char* file, int line);
 #define configTIMER_TASK_PRIORITY                               0
 #define configTIMER_QUEUE_LENGTH                                0
 #define configTIMER_TASK_STACK_DEPTH                            configMINIMAL_STACK_SIZE
-#define configMAX_SYSCALL_INTERRUPT_PRIORITY                    3
 #ifndef NDEBUG
 #define configASSERT(x)                                         if ((x) == 0) vAssertCalled(__FILE__, __LINE__)
 #else
@@ -65,7 +64,6 @@ void vAssertCalled(const char* file, int line);
 #define INCLUDE_uxTaskPriorityGet                               1
 #define INCLUDE_vTaskDelete                                     1
 #define INCLUDE_vTaskSuspend                                    1
-#define INCLUDE_vTaskDelayUntil                                 1
 #define INCLUDE_vTaskDelay                                      1
 #define INCLUDE_xTaskGetSchedulerState                          1
 #define INCLUDE_xTaskGetCurrentTaskHandle                       1
