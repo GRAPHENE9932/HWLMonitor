@@ -21,7 +21,7 @@ int main(void) {
     pwr_ctrl_start_iwdg();
     rcc_switch_to_hsi48();
 
-    const TaskHandle_t handle = xTaskCreateStatic(
+    [[maybe_unused]] const TaskHandle_t handle = xTaskCreateStatic(
         main_task,
         "mai",
         MAIN_TASK_STACK_SIZE,
