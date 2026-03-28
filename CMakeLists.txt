@@ -56,6 +56,8 @@ add_executable(
     src/ui.c
     src/rcc.c
     src/rtc.c
+    src/i2c.c
+    src/opt4001.c
     src/gui/status_bar.c
     src/gui/menu.c
     $<$<CONFIG:Debug>:src/debug_utils.c>
