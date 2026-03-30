@@ -1,6 +1,7 @@
 # HWLMonitor
 
-"Image here"
+![Device front](doc_images/device_front.jpg)
+![Device back](doc_images/device_back.jpg)
 
 [![CMake on a single platform](https://github.com/GRAPHENE9932/HWLMonitor/actions/workflows/cmake-single-platform.yml/badge.svg)](https://github.com/GRAPHENE9932/HWLMonitor/actions/workflows/cmake-single-platform.yml)
 
@@ -14,7 +15,7 @@ like a USB mouse.
 
 ## Schematics
 
-"Image here"
+![Schematic](doc_images/schematic.png)
 
 ## Building the firmware
 
