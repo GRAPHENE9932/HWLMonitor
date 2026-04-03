@@ -1,5 +1,6 @@
 /**
- * This module completely takes over ADC1, TIM15 and DMA CH1.
+ * This module completely takes over ADC1, TIM15, DMA CH1 and dma_ch1_handler
+ * ISR.
  * Accesses to ADC are protected with a mutex.
  */
 
