@@ -1,9 +1,10 @@
 # HWLMonitor
 
+[![CMake on a single platform](https://github.com/GRAPHENE9932/HWLMonitor/actions/workflows/cmake-single-platform.yml/badge.svg)](https://github.com/GRAPHENE9932/HWLMonitor/actions/workflows/cmake-single-platform.yml)
+
+![Logo](doc_images/logo.png)
 ![Device front](doc_images/device_front.jpg)
 ![Device back](doc_images/device_back.jpg)
-
-[![CMake on a single platform](https://github.com/GRAPHENE9932/HWLMonitor/actions/workflows/cmake-single-platform.yml/badge.svg)](https://github.com/GRAPHENE9932/HWLMonitor/actions/workflows/cmake-single-platform.yml)
 
 A USB battery-powered device for input lag measurement.
 
