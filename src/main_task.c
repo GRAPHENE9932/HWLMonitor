@@ -10,8 +10,7 @@ void main_task(void*) {
     ui_init();
     adc_init();
     pwr_ctrl_start_task();
-    st7735_init();
-    st7735_clear(ST7735_COLOR(0u, 0u, 31u));
+    gui_init();
     status_bar_init();
 
     while (true) {

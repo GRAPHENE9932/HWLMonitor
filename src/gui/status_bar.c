@@ -1,4 +1,5 @@
 #include "gui/status_bar.h"
+#include "gui/gui.h"
 #include "utils.h"
 #include "st7735.h"
 #include "images.h"
@@ -12,10 +13,10 @@
 #define TASK_STACK_DEPTH 128
 
 #define BG_COLOR ST7735_COLOR(0, 0, 0)
-#define TEXT_POS_X 1
+#define TEXT_POS_X 0u
 #define TEXT_POS_Y 2
 #define TEXT_COLOR ST7735_COLOR(25, 50, 25)
-#define BAT_POS_X (ST7735_WIDTH - 18)
+#define BAT_POS_X (GUI_SCR_WIDTH - 16u)
 #define BAT_POS_Y 0
 
 #define BAT_THR_0 FIX32_CONST(3, 2, 0)
@@ -30,19 +31,14 @@ static TickType_t task_last_wake_time = 0;
 static StaticQueue_t mutex_mem;
 static QueueHandle_t mutex;
 
-static struct st7735_text text = {
-    .x = TEXT_POS_X, .y = TEXT_POS_Y,
-    .fg = TEXT_COLOR, .bg = BG_COLOR,
-    .text = NULL, .len = 0, .prev_len = 0,
-    .height_cutoff = STATUS_BAR_HEIGHT - TEXT_POS_Y
-};
+static struct gui_text text;
 
 static void redraw_text(void) {
     [[maybe_unused]] int32_t err = xSemaphoreTake(mutex, portMAX_DELAY);
     configASSERT(err == pdPASS);
 
     if (text.text != NULL) {
-        st7735_output_text(&text);
+        gui_draw_text(&text);
     }
 
     err = xSemaphoreGive(mutex);
@@ -83,7 +79,7 @@ static void update_battery(void) {
 
 void status_bar_full_redraw(void) {
     const struct st7735_rect rect = {
-        .x = 0, .y = 0, .w = ST7735_WIDTH, .h = STATUS_BAR_HEIGHT
+        .x = 0, .y = 0, .w = GUI_SCR_WIDTH, .h = STATUS_BAR_HEIGHT
     };
 
     st7735_output_rect(rect, BG_COLOR);
@@ -106,6 +102,15 @@ static void updater_task(void*) {
 
 void status_bar_init(void) {
     task_last_wake_time = xTaskGetTickCount();
+
+    gui_text_init(&text, 1u);
+    text.text = "";
+    text.len = 0u;
+    text.fg = TEXT_COLOR;
+    text.bg = BG_COLOR;
+    text.x = TEXT_POS_X;
+    text.y = TEXT_POS_Y;
+    text.height_cutoff = STATUS_BAR_HEIGHT - TEXT_POS_Y;
 
     mutex = xSemaphoreCreateMutexStatic(&mutex_mem);
     configASSERT(mutex != NULL);

@@ -208,23 +208,61 @@ void st7735_clear(color_t c) {
     configASSERT(err == pdPASS);
 }
 
-static void draw_glyph(const struct segment* s, char c, color_t bg, color_t fg,
-    uint32_t x, uint32_t y) {
-    for (uint32_t rel_y = 0; rel_y < s->rect.h; ++rel_y) {
+struct glyph_draw_info {
+    color_t bg;
+    color_t fg;
+    uint32_t x;
+    uint32_t y;
+    uint8_t height_cutoff;
+    uint8_t scale;
+    char c;
+};
+
+static void draw_glyph_unit_scale(
+    const struct segment* s, const struct glyph_draw_info* g) {
+    const uint32_t height_cutoff = min_u32(FONT_HEIGHT, g->height_cutoff);
+    for (uint32_t rel_y = 0; rel_y < height_cutoff; ++rel_y) {
         for (uint32_t rel_x = 0; rel_x < FONT_WIDTH; ++rel_x) {
-            s->ram_data[(rel_y + y) * s->rect.w + x + rel_x] = ((
-                FONT_GLYPHS[c - FONT_FIRST_ASCII]
+            s->ram_data[(rel_y + g->y) * s->rect.w + g->x + rel_x] = ((
+                FONT_GLYPHS[g->c - FONT_FIRST_ASCII]
                 [(rel_y * FONT_PADDED_WIDTH / 8 + rel_x / 8)] >>
                 (rel_x % 8)
-            ) & 1) ? fg : bg;
+            ) & 1) ? g->fg : g->bg;
         }
     }
 }
 
-static uint32_t output_text_segment(struct st7735_text* t, uint32_t off) {
-    const uint8_t char_h =
-        t->height_cutoff == 0 ? FONT_HEIGHT : t->height_cutoff;
-    const uint32_t char_size = FONT_WIDTH * char_h * sizeof(color_t);
+static void draw_square(
+    const struct segment* s, uint32_t x, uint32_t y, uint8_t h, color_t col) {
+    for (uint8_t rel_y = 0u; rel_y < h; ++rel_y) {
+        for (uint8_t rel_x = 0u; rel_x < h; ++rel_x) {
+            s->ram_data[(y + rel_y) * s->rect.w + x + rel_x] = col;
+        }
+    }
+}
+
+static void draw_glyph(
+    const struct segment* s, const struct glyph_draw_info* g) {
+    const uint32_t height_cutoff = min_u32(FONT_HEIGHT, g->height_cutoff);
+    for (uint32_t rel_y = 0; rel_y < height_cutoff; ++rel_y) {
+        for (uint32_t rel_x = 0; rel_x < FONT_WIDTH; ++rel_x) {
+            const color_t col = ((
+                FONT_GLYPHS[g->c - FONT_FIRST_ASCII]
+                [(rel_y * FONT_PADDED_WIDTH / 8 + rel_x / 8)] >>
+                (rel_x % 8)
+            ) & 1) ? g->fg : g->bg;
+
+            draw_square(
+                s, g->x + rel_x * g->scale, g->y + rel_y * g->scale, g->scale, 
+                col);
+        }
+    }
+}
+
+static uint32_t output_text_segment(const struct st7735_text* t, uint32_t off) {
+    const uint32_t char_h = min_u32(FONT_HEIGHT, t->height_cutoff) * t->scale;
+    const uint32_t char_w = FONT_WIDTH * t->scale;
+    const uint32_t char_size = char_w * char_h * sizeof(color_t);
     const uint32_t chars_in_seg =
         min_u32(RAM_BUFFER_SIZE / char_size, t->len - off);
     configASSERT(chars_in_seg > 0);
@@ -236,15 +274,31 @@ static uint32_t output_text_segment(struct st7735_text* t, uint32_t off) {
 
     const struct segment s = {
         .rect = {
-            .x = t->x + FONT_WIDTH * off, .y = t->y,
-            .w = chars_in_seg * FONT_WIDTH, .h = char_h
+            .x = t->x + char_w * off, .y = t->y,
+            .w = chars_in_seg * char_w, .h = char_h
         },
         .kind = SEGMENT_RAM_BUF_IMAGE,
         .ram_data = buf
     };
 
+    struct glyph_draw_info inf = {
+        .bg = t->bg,
+        .fg = t->fg,
+        .x = 0u,
+        .y = 0u,
+        t->height_cutoff,
+        t->scale,
+        '\0'
+    };
     for (uint32_t i = 0; i < chars_in_seg; ++i) {
-        draw_glyph(&s, t->text[off + i], t->bg, t->fg, FONT_WIDTH * i, 0);
+        inf.x = FONT_WIDTH * i * t->scale;
+        inf.c = t->text[off + i];
+
+        if (t->scale == 1u) {
+            draw_glyph_unit_scale(&s, &inf);
+        } else {
+            draw_glyph(&s, &inf);
+        }
     }
 
     err = xQueueSendToBack(tx_queue, &s, portMAX_DELAY);
@@ -253,32 +307,11 @@ static uint32_t output_text_segment(struct st7735_text* t, uint32_t off) {
     return chars_in_seg;
 }
 
-void st7735_output_text(struct st7735_text* t) {
+void st7735_output_text(const struct st7735_text* t) {
     uint32_t i = 0;
     while (i < t->len) {
         i += output_text_segment(t, i);
     }
-    
-    // Clear the space that was previously taken by this text.
-    if (i < t->prev_len) {
-        const uint8_t char_h =
-            t->height_cutoff == 0 ? FONT_HEIGHT : t->height_cutoff;
-
-        const struct segment s = {
-            .rect = {
-                .x = t->x + i * FONT_WIDTH, .y = t->y,
-                .w = (t->prev_len - i) * FONT_WIDTH, .h = char_h
-            },
-            .kind = SEGMENT_FILLED,
-            .fill_color = t->bg
-        };
-
-        [[maybe_unused]] const int32_t err =
-            xQueueSendToBack(tx_queue, &s, portMAX_DELAY);
-        configASSERT(err == pdPASS);
-    }
-
-    t->prev_len = t->len;
 }
 
 void st7735_output_image(const color_t* image, uint32_t x, uint32_t y) {

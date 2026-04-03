@@ -1,5 +1,6 @@
 #include "gui/menu.h"
 #include "gui/status_bar.h"
+#include "gui/gui.h"
 #include "images.h"
 #include "st7735.h"
 #include "ui.h"
@@ -13,9 +14,9 @@
 #define NAME_POS_Y (IMG_POS_Y + 64u)
 #define ARROW_LEFT_POS_X 1u
 #define ARROW_LEFT_POS_Y NAME_POS_Y
-#define ARROW_RIGHT_POS_X (ST7735_WIDTH - 9u)
+#define ARROW_RIGHT_POS_X (GUI_SCR_WIDTH - 7u)
 #define ARROW_RIGHT_POS_Y NAME_POS_Y
-#define BG_COLOR ST7735_COLOR(6u, 12u, 6u)
+
 #define NAME_COLOR ST7735_COLOR(29u, 59u, 29u)
 
 static const color_t* const MODE_IMAGES[MENU_MODES] = {
@@ -37,31 +38,24 @@ static const char* const MODE_NAMES[MENU_MODES] = {
 enum menu_mode menu_start(enum menu_mode cur) {
     configASSERT(cur < MENU_MODES);
 
+    gui_clear_bg();
     status_bar_set_text("Menu");
-
-    static const struct st7735_rect BG_RECT = {
-        .x = 0u, .y = STATUS_BAR_HEIGHT,
-        .w = ST7735_WIDTH, .h = ST7735_WIDTH - STATUS_BAR_HEIGHT
-    };
-    st7735_output_rect(BG_RECT, BG_COLOR);
     st7735_output_image(ARROW_LEFT_IMG, ARROW_LEFT_POS_X, ARROW_LEFT_POS_Y);
     st7735_output_image(ARROW_RIGHT_IMG, ARROW_RIGHT_POS_X, ARROW_RIGHT_POS_Y);
 
-    struct st7735_text name_text = {
-        .text = MODE_NAMES[cur],
-        .len = strlen(MODE_NAMES[cur]),
-        .bg = BG_COLOR,
-        .fg = NAME_COLOR,
-        .x = NAME_POS_X,
-        .y = NAME_POS_Y,
-        .prev_len = 0u
-    };
+    struct gui_text name_text;
+    gui_text_init(&name_text, 1u);
+    name_text.text = MODE_NAMES[cur];
+    name_text.len = strlen(MODE_NAMES[cur]);
+    name_text.fg = NAME_COLOR;
+    name_text.x = NAME_POS_X;
+    name_text.y = NAME_POS_Y;
 
     while (true) {
         st7735_output_image(MODE_IMAGES[cur], IMG_POS_X, IMG_POS_Y);
         name_text.text = MODE_NAMES[cur];
         name_text.len = strlen(MODE_NAMES[cur]);
-        st7735_output_text(&name_text);
+        gui_draw_text(&name_text);
 
         switch(ui_wait_click()) {
         case BTN_LEFT:
@@ -70,6 +64,8 @@ enum menu_mode menu_start(enum menu_mode cur) {
         case BTN_RIGHT:
             cur = cur < MENU_MODES - 1u ? cur + 1u : MENU_MODES - 1u;
             break;
+        case BTN_OK:
+            return cur;
         default:
             break;
         }

@@ -37,8 +37,8 @@ struct st7735_text {
     color_t bg;
     uint16_t x;
     uint16_t y;
-    uint16_t prev_len;
     uint8_t height_cutoff;
+    uint8_t scale;
 };
 
 struct st7735_rect {
@@ -50,10 +50,14 @@ struct st7735_rect {
 
 void st7735_init(void);
 void st7735_clear(color_t c);
-void st7735_output_text(struct st7735_text* t);
+void st7735_output_text(const struct st7735_text* t);
 
-// Expects data in ST7735_COLOR format preceded by two half words indicating
-// image width and height.
+/**
+ * @brief Queues the image to render on the screen.
+ *
+ * Expects data in ST7735_COLOR format preceded with two half words indicating
+ * image width and height.
+ */
 void st7735_output_image(const color_t* image, uint32_t x, uint32_t y);
 
 void st7735_output_rect(struct st7735_rect rect, color_t color);

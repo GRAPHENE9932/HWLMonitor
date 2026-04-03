@@ -60,6 +60,7 @@ add_executable(
     src/opt4001.c
     src/gui/status_bar.c
     src/gui/menu.c
+    src/gui/gui.c
     $<$<CONFIG:Debug>:src/debug_utils.c>
 )
 
