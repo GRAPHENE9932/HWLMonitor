@@ -13,30 +13,19 @@
  * status bar.
  */
 constexpr struct st7735_rect GUI_AREA = {
-    .x = 0u, .y = STATUS_BAR_HEIGHT,
+    .x = 1u, .y = STATUS_BAR_HEIGHT,
     .w = GUI_SCR_WIDTH, .h = GUI_SCR_HEIGHT - STATUS_BAR_HEIGHT
 };
 
-struct gui_text {
-    const char* text;
-    uint16_t len;
-    color_t fg;
-    color_t bg;
-    uint16_t x;
-    uint16_t y;
-    uint8_t height_cutoff;
-    uint8_t _scale;
-    uint16_t _prev_len;
+enum gui_alignment : uint8_t {
+    GUI_ALIGN_LEFT = 0u,
+    GUI_ALIGN_RIGHT = 1u,
 };
 
 void gui_init(void);
 
-void gui_text_init(struct gui_text* text, uint8_t scale);
-
 inline static void gui_clear_bg(void) {
     st7735_output_rect(GUI_AREA, GUI_BG_COLOR);
 }
-
-void gui_draw_text(struct gui_text* text);
 
 #endif // GUI_H

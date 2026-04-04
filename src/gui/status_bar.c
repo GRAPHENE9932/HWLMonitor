@@ -1,5 +1,6 @@
 #include "gui/status_bar.h"
 #include "gui/gui.h"
+#include "gui/text.h"
 #include "utils.h"
 #include "st7735.h"
 #include "images.h"
@@ -37,9 +38,7 @@ static void redraw_text(void) {
     [[maybe_unused]] int32_t err = xSemaphoreTake(mutex, portMAX_DELAY);
     configASSERT(err == pdPASS);
 
-    if (text.text != NULL) {
-        gui_draw_text(&text);
-    }
+    gui_text_draw(&text);
 
     err = xSemaphoreGive(mutex);
     configASSERT(err == pdPASS);
@@ -103,14 +102,11 @@ static void updater_task(void*) {
 void status_bar_init(void) {
     task_last_wake_time = xTaskGetTickCount();
 
-    gui_text_init(&text, 1u);
-    text.text = "";
-    text.len = 0u;
-    text.fg = TEXT_COLOR;
-    text.bg = BG_COLOR;
-    text.x = TEXT_POS_X;
-    text.y = TEXT_POS_Y;
-    text.height_cutoff = STATUS_BAR_HEIGHT - TEXT_POS_Y;
+    gui_text_init(&text);
+    gui_text_set_fg(&text, TEXT_COLOR);
+    gui_text_set_bg(&text, BG_COLOR);
+    gui_text_set_pos(&text, TEXT_POS_X, TEXT_POS_Y);
+    gui_text_set_height_cutoff(&text, STATUS_BAR_HEIGHT - TEXT_POS_Y);
 
     mutex = xSemaphoreCreateMutexStatic(&mutex_mem);
     configASSERT(mutex != NULL);
@@ -124,8 +120,7 @@ void status_bar_set_text(const char* new_text) {
     [[maybe_unused]] int32_t err = xSemaphoreTake(mutex, portMAX_DELAY);
     configASSERT(err == pdPASS);
 
-    text.text = new_text;
-    text.len = strlen(new_text);
+    gui_text_set_text(&text, new_text, strlen(new_text));
 
     err = xSemaphoreGive(mutex);
     configASSERT(err == pdPASS);

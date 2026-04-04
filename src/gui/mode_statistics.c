@@ -1,6 +1,6 @@
 #include "gui/mode_statistics.h"
 #include "gui/gui.h"
-#include "font.h"
+#include "gui/text.h"
 #include "utils.h"
 #include "st7735.h"
 #include "opt4001.h"
@@ -16,7 +16,6 @@ struct lx_val_text {
 
 struct lx_unit_text {
     struct gui_text text;
-    char buf[3u];
 };
 
 enum lx_unit : uint8_t {
@@ -36,20 +35,19 @@ static enum lx_unit choose_unit(uint32_t mlx) {
 }
 
 static void lx_val_text_init(struct lx_val_text* lv) {
-    gui_text_init(&lv->text, 2u);
+    gui_text_init(&lv->text);
     for (uint32_t i = 0u; i < sizeof(lv->buf); ++i) {
         lv->buf[i] = '-';
     }
-    lv->text.text = lv->buf;
-    lv->text.len = 0u;
-    lv->text.fg = TEXT_COLOR;
-    lv->text.x = 2u;
-    lv->text.y = STATUS_BAR_HEIGHT;
-    lv->text.height_cutoff = FONT_HEIGHT;
+    gui_text_set_text(&lv->text, lv->buf, sizeof(lv->buf));
+    gui_text_set_fg(&lv->text, TEXT_COLOR);
+    gui_text_set_pos(&lv->text, 2u, STATUS_BAR_HEIGHT);
+    gui_text_set_scale(&lv->text, 2u);
 }
 
 static void lx_val_text_update(
-    struct lx_val_text* lv, uint32_t mlx, enum lx_unit unit) {
+    struct lx_val_text* lv, uint32_t mlx, enum lx_unit unit
+) {
     uint8_t decimals = 0u;
     uint32_t int_val = 0u;
     uint32_t dec_val = 0u;
@@ -79,52 +77,41 @@ static void lx_val_text_update(
     if (decimals != 0u && off < sizeof(lv->buf)) {
         lv->buf[off++] = ',';
         off += u32_to_str_padded(
-            &lv->buf[off], min_i32(decimals, sizeof(lv->buf) - off), dec_val);
+            &lv->buf[off], min_i32(decimals, sizeof(lv->buf) - off), dec_val
+        );
     }
-    lv->text.len = off;
+    gui_text_set_text(&lv->text, lv->buf, off);
 }
 
 static void lx_val_text_output(struct lx_val_text* lv) {
-    gui_draw_text(&lv->text);
+    gui_text_draw(&lv->text);
 }
 
 static void lx_unit_text_init(struct lx_unit_text* lu) {
-    gui_text_init(&lu->text, 2u);
-    lu->buf[0] = 'l';
-    lu->buf[1] = 'x';
-
-    lu->text.text = lu->buf;
-    lu->text.len = 2u;
-    lu->text.fg = TEXT_COLOR;
-    lu->text.x = GUI_SCR_WIDTH - FONT_WIDTH * 3u * 2u;
-    lu->text.y = STATUS_BAR_HEIGHT;
-    lu->text.height_cutoff = FONT_HEIGHT;
+    gui_text_init(&lu->text);
+    gui_text_set_text(&lu->text, "lx", 2u);
+    gui_text_set_fg(&lu->text, TEXT_COLOR);
+    gui_text_set_alignment(&lu->text, GUI_ALIGN_RIGHT);
+    gui_text_set_pos(&lu->text, GUI_SCR_WIDTH, STATUS_BAR_HEIGHT);
+    gui_text_set_scale(&lu->text, 2u);
 }
 
 static void lx_unit_text_update(struct lx_unit_text* lu, enum lx_unit unit) {
     switch (unit) {
     case UNIT_MILLILUX:
-        lu->buf[0] = 'm';
-        lu->buf[1] = 'l';
-        lu->buf[2] = 'x';
-        lu->text.len = 3u;
+        gui_text_set_text(&lu->text, "mlx", 3u);
         break;
     case UNIT_LUX:
-        lu->buf[0] = 'l';
-        lu->buf[1] = 'x';
-        lu->text.len = 2u;
+        gui_text_set_text(&lu->text, "lx", 2u);
         break;
     case UNIT_KILOLUX:
-        lu->buf[0] = 'k';
-        lu->buf[1] = 'l';
-        lu->buf[2] = 'x';
-        lu->text.len = 3u;
+        gui_text_set_text(&lu->text, "klx", 3u);
         break;
     }
 }
 
 static void lx_unit_text_output(struct lx_unit_text* lu) {
-    gui_draw_text(&lu->text);
+    gui_text_draw(&lu->text);
 }
 
 void mode_statistics_start(void) {

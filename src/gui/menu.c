@@ -1,6 +1,7 @@
 #include "gui/menu.h"
 #include "gui/status_bar.h"
 #include "gui/gui.h"
+#include "gui/text.h"
 #include "images.h"
 #include "st7735.h"
 #include "ui.h"
@@ -44,18 +45,15 @@ enum menu_mode menu_start(enum menu_mode cur) {
     st7735_output_image(ARROW_RIGHT_IMG, ARROW_RIGHT_POS_X, ARROW_RIGHT_POS_Y);
 
     struct gui_text name_text;
-    gui_text_init(&name_text, 1u);
-    name_text.text = MODE_NAMES[cur];
-    name_text.len = strlen(MODE_NAMES[cur]);
-    name_text.fg = NAME_COLOR;
-    name_text.x = NAME_POS_X;
-    name_text.y = NAME_POS_Y;
+    gui_text_init(&name_text);
+    gui_text_set_text(&name_text, MODE_NAMES[cur], strlen(MODE_NAMES[cur]));
+    gui_text_set_fg(&name_text, NAME_COLOR);
+    gui_text_set_pos(&name_text, NAME_POS_X, NAME_POS_Y);
 
     while (true) {
         st7735_output_image(MODE_IMAGES[cur], IMG_POS_X, IMG_POS_Y);
-        name_text.text = MODE_NAMES[cur];
-        name_text.len = strlen(MODE_NAMES[cur]);
-        gui_draw_text(&name_text);
+        gui_text_set_text(&name_text, MODE_NAMES[cur], strlen(MODE_NAMES[cur]));
+        gui_text_draw(&name_text);
 
         switch(ui_wait_click()) {
         case BTN_LEFT:
