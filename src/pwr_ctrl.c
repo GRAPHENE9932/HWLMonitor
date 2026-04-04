@@ -69,7 +69,7 @@ static void iwdg_set_26s(void) {
 
     IWDG->KR = 0x0000AAAAu;
     IWDG->KR = 0x00005555u;
-    IWDG->PR = 0b110; // /256 divider ()
+    IWDG->PR = 0b110; // /256 divider (156.25 Hz).
     IWDG->RLR = 0xFFFu; // Watchdog will reset after 26.208 s of inactivity.
     while ((IWDG->SR & IWDG_SR_PVU) != 0u) {} // TODO: timeout.
     IWDG->KR = 0x0000AAAAu;
