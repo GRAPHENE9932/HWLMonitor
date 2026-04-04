@@ -103,7 +103,7 @@ FetchContent_MakeAvailable(
 )
 add_custom_command(
     OUTPUT ${FONT_H}
-    COMMAND python ${PROJECT_SOURCE_DIR}/scripts/ttf-to-header.py -i ${FONT_TTF} -o ${FONT_H}
+    COMMAND python ${PROJECT_SOURCE_DIR}/scripts/ttf-to-header.py -i ${FONT_TTF} -o ${FONT_H} -x 9 -y 16
     DEPENDS ${PROJECT_SOURCE_DIR}/scripts/ttf-to-header.py
 )
 

@@ -12,40 +12,37 @@ from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from PIL import Image, ImageDraw, ImageFont
 import os
 
-BITMAP_WIDTH = 9
-BITMAP_HEIGHT = 16
-BITMAP_PADDED_WIDTH = (BITMAP_WIDTH + 7) // 8 * 8
-BITMAP_SIZE_BYTES = BITMAP_PADDED_WIDTH * BITMAP_HEIGHT // 8
-
 CHARSET_BEGIN = 0x20
 CHARSET_END = 0x7F # Not including!
 CHARS_AMOUNT = CHARSET_END - CHARSET_BEGIN
 
-def rasterize_glyph(font, char):
+def rasterize_glyph(font, char, char_size):
     # "1" mode is 1 bit monochrome.
-    image = Image.new("1", (BITMAP_WIDTH, BITMAP_HEIGHT), color=0)
+    image = Image.new("1", (char_size[0], char_size[1]), color=0)
     image_draw = ImageDraw.Draw(image)
     image_draw.text((0, 0), chr(char), font=font, fill=1)
     return image
 
-def image_to_bytes(image):
-    result = [0] * (BITMAP_SIZE_BYTES)
+def image_to_bytes(image, char_size):
+    bitmap_padded_width = (char_size[0] + 7) // 8 * 8
+    bitmap_size_bytes = bitmap_padded_width * char_size[1] // 8
+    result = [0] * (bitmap_size_bytes)
 
-    for y in range(BITMAP_HEIGHT):
-        for x in range(BITMAP_WIDTH):
+    for y in range(char_size[1]):
+        for x in range(char_size[0]):
             if image.getpixel((x, y)):
-                result[(y * BITMAP_PADDED_WIDTH + x) // 8] |= 1 << (x % 8)
+                result[(y * bitmap_padded_width + x) // 8] |= 1 << (x % 8)
     
     return result
 
 def hex_1_byte(n):
     return f"0x{n:02X}"
 
-def generate_c_array(font):
+def generate_c_array(font, char_size):
     result = f"static const uint8_t FONT_GLYPHS[{CHARS_AMOUNT}][FONT_BITMAP_SIZE] = {{\n"
 
     for char in range(CHARSET_BEGIN, CHARSET_END):
-        char_bytes = image_to_bytes(rasterize_glyph(font, char))
+        char_bytes = image_to_bytes(rasterize_glyph(font, char, char_size), char_size)
 
         result += "    { "
         result += ", ".join(map(hex_1_byte, char_bytes))
@@ -67,10 +64,12 @@ def main():
     )
     arg_parser.add_argument("--input", "-i", metavar="<path to a font file>", type=str, required=True)
     arg_parser.add_argument("--output", "-o", metavar="<.h file path>", type=str, required=True)
+    arg_parser.add_argument("--char-width", "-x", metavar="<character width>", type=int, required=True)
+    arg_parser.add_argument("--char-height", "-y", metavar="<character height>", type=int, required=True)
     args = arg_parser.parse_args()
 
-    font = ImageFont.truetype(args.input, size=BITMAP_HEIGHT)
-    c_array = generate_c_array(font)
+    font = ImageFont.truetype(args.input, size=args.char_height)
+    c_array = generate_c_array(font, (args.char_width, args.char_height))
 
     header_name = header_guard_macro_name(args.output)
 
@@ -80,9 +79,9 @@ def main():
 
 #include <stdint.h>
 
-#define FONT_WIDTH {BITMAP_WIDTH}
-#define FONT_PADDED_WIDTH {BITMAP_PADDED_WIDTH}
-#define FONT_HEIGHT {BITMAP_HEIGHT}
+#define FONT_WIDTH {args.char_width}
+#define FONT_PADDED_WIDTH {(args.char_width + 7) // 8 * 8}
+#define FONT_HEIGHT {args.char_height}
 #define FONT_FIRST_ASCII {CHARSET_BEGIN}
 #define FONT_BITMAP_SIZE (FONT_PADDED_WIDTH * FONT_HEIGHT / 8)
 
