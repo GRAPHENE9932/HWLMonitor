@@ -14,7 +14,7 @@ set(CMAKE_ASM_COMPILER arm-none-eabi-gcc)
 
 set(LINKER_SCRIPT "${PROJECT_SOURCE_DIR}/linker_script.ld")
 
-set(FONT_TTF "${FETCHCONTENT_BASE_DIR}/font-src/ttf - Mx \\(mixed outline+bitmap\\)/Mx437_IBM_VGA_9x16.ttf")
+set(FONT_TTF "${FETCHCONTENT_BASE_DIR}/font-src/ttf - Mx \\(mixed outline+bitmap\\)/Mx437_IBM_VGA_8x16.ttf")
 set(FONT_H "${CMAKE_CURRENT_BINARY_DIR}/font.h")
 set(IMAGES_FOLDER "${PROJECT_SOURCE_DIR}/images")
 set(IMAGES_H "${CMAKE_CURRENT_BINARY_DIR}/images.h")
@@ -103,7 +103,7 @@ FetchContent_MakeAvailable(
 )
 add_custom_command(
     OUTPUT ${FONT_H}
-    COMMAND python ${PROJECT_SOURCE_DIR}/scripts/ttf-to-header.py -i ${FONT_TTF} -o ${FONT_H} -x 9 -y 16
+    COMMAND python ${PROJECT_SOURCE_DIR}/scripts/ttf-to-header.py -i ${FONT_TTF} -o ${FONT_H} -x 8 -y 16
     DEPENDS ${PROJECT_SOURCE_DIR}/scripts/ttf-to-header.py
 )
 
