@@ -5,7 +5,6 @@
 #include <FreeRTOS.h>
 #include <task.h>
 
-// TODO: deduplicate the implementation.
 // TODO: add get_error().
 
 #define DMA_TIMEOUT_MS 100u
@@ -168,12 +167,12 @@ void i2c2_rx(uint8_t addr, uint8_t* data, uint8_t len) {
         return;
     }
 
-    configASSERT(i2c1_waiting_task == NULL);
-    i2c1_waiting_task = xTaskGetCurrentTaskHandle();
-    i2c_rx_generic(I2C1, I2C1_RX_DMA, addr, data, len);
+    configASSERT(i2c2_waiting_task == NULL);
+    i2c2_waiting_task = xTaskGetCurrentTaskHandle();
+    i2c_rx_generic(I2C2, I2C2_RX_DMA, addr, data, len);
 
     if (ulTaskNotifyTake(pdTRUE, MS_TO_TICKS_ATL2(DMA_TIMEOUT_MS)) != pdPASS) {
-        i2c1_cur_error = ETIMEOUT;
+        i2c2_cur_error = ETIMEOUT;
         return;
     }
     __DSB();
