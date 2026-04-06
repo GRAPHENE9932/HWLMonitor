@@ -57,7 +57,7 @@ enum gpio_pull_up_down : uint32_t {
 
 // The attrs argument parameters must contain ORred gpio_mode, gpio_output_type,
 // gpio_speed and gpio_pull_up_down.
-void gpio_init(GPIO_TypeDef* gpio, uint8_t pin, uint32_t attrs, uint32_t af);
+void gpio_init(GPIO_TypeDef* gpio, uint8_t pin, uint32_t attrs, uint8_t af);
 
 inline static void gpio_write_hi(GPIO_TypeDef* gpio, uint8_t pin) {
     gpio->ODR |= 1u << pin;

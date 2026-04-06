@@ -11,7 +11,7 @@
     (gpiox) == GPIOF ? 5u : 0u                                                 \
 )
 
-void gpio_init(GPIO_TypeDef* gpio, uint8_t pin, uint32_t attrs, uint32_t af) {
+void gpio_init(GPIO_TypeDef* gpio, uint8_t pin, uint32_t attrs, uint8_t af) {
     if (gpio == GPIOA) {
         RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
     } else if (gpio == GPIOB) {
@@ -38,7 +38,7 @@ void gpio_init(GPIO_TypeDef* gpio, uint8_t pin, uint32_t attrs, uint32_t af) {
     gpio->PUPDR |= ((attrs & 0xFF000000) >> 24) << (pin * 2);
 
     gpio->AFR[af / 8] &= ~(GPIO_AFRL_AFSEL0_Msk << (pin % 8 * 4));
-    gpio->AFR[af / 8] |= af << (pin % 8 * 4);
+    gpio->AFR[af / 8] |= (uint32_t)af << (pin % 8 * 4);
 
     gpio->MODER &= ~(GPIO_MODER_MODER0_Msk << (pin * 2));
     gpio->MODER |= (attrs & 0x000000FF) << (pin * 2);
