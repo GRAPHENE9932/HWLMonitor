@@ -179,45 +179,56 @@ void i2c2_rx(uint8_t addr, uint8_t* data, uint8_t len) {
 }
 
 void dma_ch4_5_6_7_dma2_ch3_4_5_handler(void) {
+    bool wake_i2c1 = false;
+    bool wake_i2c2 = false;
+
     // TODO: use macros instead of hardcoded DMA channel values.
     if (DMA1->ISR & DMA_ISR_TCIF6) {
         DMA1->IFCR |= DMA_IFCR_CTCIF6;
+        wake_i2c1 = true;
     }
     if (DMA1->ISR & DMA_ISR_TCIF7) {
         DMA1->IFCR |= DMA_IFCR_CTCIF7;
+        wake_i2c1 = true;
     }
     if (DMA1->ISR & DMA_ISR_TCIF4) {
         DMA1->IFCR |= DMA_IFCR_CTCIF4;
+        wake_i2c2 = true;
     }
     if (DMA1->ISR & DMA_ISR_TCIF5) {
         DMA1->IFCR |= DMA_IFCR_CTCIF5;
+        wake_i2c2 = true;
     }
 
     if (DMA1->ISR & DMA_ISR_TEIF6) {
         DMA1->IFCR |= DMA_IFCR_CTEIF6;
         i2c1_cur_error = EDMA;
+        wake_i2c1 = true;
     }
     if (DMA1->ISR & DMA_ISR_TEIF7) {
         DMA1->IFCR |= DMA_IFCR_CTEIF7;
         i2c1_cur_error = EDMA;
+        wake_i2c1 = true;
     }
     if (DMA1->ISR & DMA_ISR_TEIF4) {
         DMA1->IFCR |= DMA_IFCR_CTEIF4;
         i2c2_cur_error = EDMA;
+        wake_i2c2 = true;
     }
     if (DMA1->ISR & DMA_ISR_TEIF5) {
         DMA1->IFCR |= DMA_IFCR_CTEIF5;
         i2c2_cur_error = EDMA;
+        wake_i2c2 = true;
     }
 
-    if (i2c1_waiting_task != NULL) {
+    if (wake_i2c1 && i2c1_waiting_task != NULL) {
         BaseType_t higher_priority_task_woken = pdFALSE;
         vTaskNotifyGiveFromISR(i2c1_waiting_task, &higher_priority_task_woken);
         portYIELD_FROM_ISR(higher_priority_task_woken);
         i2c1_waiting_task = NULL;
     }
 
-    if (i2c2_waiting_task != NULL) {
+    if (wake_i2c2 && i2c2_waiting_task != NULL) {
         BaseType_t higher_priority_task_woken = pdFALSE;
         vTaskNotifyGiveFromISR(i2c2_waiting_task, &higher_priority_task_woken);
         portYIELD_FROM_ISR(higher_priority_task_woken);
