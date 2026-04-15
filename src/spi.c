@@ -101,7 +101,7 @@ static void dma_tx_generic(const void* data, uint32_t len, uint32_t dma_ccr) {
 }
 
 void spi1_tx(const uint16_t* data, uint32_t len) {
-    if (cur_error != 0) {
+    if (cur_error != 0 || len == 0u) {
         return;
     }
 
@@ -116,7 +116,7 @@ void spi1_tx(const uint16_t* data, uint32_t len) {
 }
 
 void spi1_tx_repeating_hword(uint16_t data, uint32_t repeats) {
-    if (cur_error != 0) {
+    if (cur_error != 0 || repeats == 0u) {
         return;
     }
 
