@@ -58,6 +58,7 @@ add_executable(
     src/rtc.c
     src/i2c.c
     src/opt4001.c
+    src/tcs3400.c
     src/gui/status_bar.c
     src/gui/menu.c
     src/gui/mode_statistics.c
