@@ -1,11 +1,27 @@
 #include "gui/mode_statistics.h"
 #include "gui/gui.h"
 #include "gui/text.h"
+#include "gui/bar.h"
 #include "utils.h"
 #include "st7735.h"
 #include "opt4001.h"
+#include "tcs3400.h"
+#include <string.h>
 
 #define TEXT_COLOR ST7735_COLOR(29u, 59u, 29u)
+
+#define BAR_FRAME_COLOR ST7735_COLOR(29u, 59u, 29u)
+#define BAR_WIDTH 70u
+#define BAR_HEIGHT 15u
+#define BAR_LABEL_POS_X 0u
+#define BAR_POS_X (BAR_LABEL_POS_X + 9u)
+#define BAR_POS_Y (STATUS_BAR_HEIGHT + 50u)
+#define BAR_GAP 1u
+#define BAR_COLOR_RED ST7735_COLOR(31u, 0u, 0u)
+#define BAR_COLOR_GREEN ST7735_COLOR(0u, 61u, 0u)
+#define BAR_COLOR_BLUE ST7735_COLOR(0u, 0u, 31u)
+#define BAR_COLOR_IR ST7735_COLOR(16u, 32u, 16u)
+
 #define MILLI_THRESHOLD 1000u
 #define KILO_THRESHOLD 10'000'000u
 
@@ -16,6 +32,11 @@ struct lx_val_text {
 
 struct lx_unit_text {
     struct gui_text text;
+};
+
+struct color_bar {
+    struct gui_bar bar;
+    struct gui_text label;
 };
 
 enum lx_unit : uint8_t {
@@ -114,12 +135,40 @@ static void lx_unit_text_output(struct lx_unit_text* lu) {
     gui_text_draw(&lu->text);
 }
 
+static void color_bar_init(
+    struct color_bar* bar, const char* label, color_t fill, uint16_t y
+) {
+    gui_bar_init(&bar->bar);
+    gui_bar_set_pos(&bar->bar, BAR_POS_X, y);
+    gui_bar_set_size(&bar->bar, BAR_WIDTH, BAR_HEIGHT);
+    gui_bar_set_bar_color(&bar->bar, fill);
+    gui_bar_set_frame_color(&bar->bar, BAR_FRAME_COLOR);
+    gui_bar_set_fill(&bar->bar, 255u);
+
+    gui_text_init(&bar->label);
+    gui_text_set_text(&bar->label, label, strlen(label));
+    gui_text_set_pos(&bar->label, BAR_LABEL_POS_X, y);
+    gui_text_set_fg(&bar->label, TEXT_COLOR);
+}
+
+static void color_bar_update(struct color_bar* bar, uint8_t fill) {
+    gui_text_draw(&bar->label);
+
+    gui_bar_set_fill(&bar->bar, fill);
+    gui_bar_draw(&bar->bar);
+}
+
 void mode_statistics_start(void) {
     struct lx_val_text lx_val_text = { 0 };
     struct lx_unit_text lx_unit_text = { 0 };
+    struct color_bar r_bar = { 0 };
+    struct color_bar g_bar = { 0 };
+    struct color_bar b_bar = { 0 };
+    struct color_bar ir_bar = { 0 };
 
     opt4001_init();
     opt4001_start_cont();
+    tcs3400_init();
 
     gui_clear_bg();
     status_bar_set_text("Statistics");
@@ -127,12 +176,31 @@ void mode_statistics_start(void) {
     lx_val_text_init(&lx_val_text);
     lx_unit_text_init(&lx_unit_text);
 
+    uint16_t bar_y = BAR_POS_Y;
+    color_bar_init(&r_bar, "R", BAR_COLOR_RED, bar_y);
+    bar_y += BAR_HEIGHT + BAR_GAP;
+    color_bar_init(&g_bar, "G", BAR_COLOR_GREEN, bar_y);
+    bar_y += BAR_HEIGHT + BAR_GAP;
+    color_bar_init(&b_bar, "B", BAR_COLOR_BLUE, bar_y);
+    bar_y += BAR_HEIGHT + BAR_GAP;
+    color_bar_init(&ir_bar, "I", BAR_COLOR_IR, bar_y);
+
     while (true) {
         const uint32_t mlx = opt4001_read_mlx();
         const enum lx_unit unit = choose_unit(mlx);
+
+        struct tcs3400_raw_data raw_col_data;
+        struct tcs3400_norm_data col_data;
+        tcs3400_get_last(&raw_col_data, true);
+        tcs3400_normalize_data(&raw_col_data, &col_data);
+
         lx_val_text_update(&lx_val_text, mlx, unit);
         lx_val_text_output(&lx_val_text);
         lx_unit_text_update(&lx_unit_text, unit);
         lx_unit_text_output(&lx_unit_text);
+        color_bar_update(&r_bar, col_data.r >> 8u);
+        color_bar_update(&g_bar, col_data.g >> 8u);
+        color_bar_update(&b_bar, col_data.b >> 8u);
+        color_bar_update(&ir_bar, col_data.ir >> 8u);
     }
 }

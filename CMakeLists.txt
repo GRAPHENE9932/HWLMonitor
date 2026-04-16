@@ -64,6 +64,7 @@ add_executable(
     src/gui/mode_statistics.c
     src/gui/gui.c
     src/gui/text.c
+    src/gui/bar.c
     $<$<CONFIG:Debug>:src/debug_utils.c>
 )
 

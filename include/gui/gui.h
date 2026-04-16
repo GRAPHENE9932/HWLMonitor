@@ -28,4 +28,6 @@ inline static void gui_clear_bg(void) {
     st7735_output_rect(GUI_AREA, GUI_BG_COLOR);
 }
 
+void gui_draw_frame(struct st7735_rect rect, color_t col);
+
 #endif // GUI_H
